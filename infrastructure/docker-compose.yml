@@ -51,8 +51,8 @@ services:
 
   auth-service:
     build:
-      context: ../services/auth-service
-      dockerfile: Dockerfile
+      context: ../services/
+      dockerfile: auth-service/Dockerfile 
     networks:
       - hueca-net
     environment:
@@ -72,6 +72,28 @@ services:
       - "3001:3001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  inventory-service:
+    build:
+      context: ../services
+      dockerfile: inventory-service/Dockerfile
+    networks:
+      - hueca-net
+    environment:
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Shadin2001
+      POSTGRES_DB: la_hueca_del_sabor_db
+    depends_on:
+      - postgres
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/db-inventory"]
       interval: 30s
       timeout: 10s
       retries: 3
