@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    networks:
+      - hueca-net
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      - zookeeper
+    networks:
+      - hueca-net
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  auth-service:
+    build:
+      context: ../services/auth-service
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_DB: la_hueca_del_sabor_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Shadin2001
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: 5432
+      JWT_SECRET: mysecretkey
+    depends_on:
+      - kafka  
+    ports:
+      - "3002:3002"
+    networks:
+      - hueca-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  inventory-service:
+    build:
+      context: ../services/inventory-service
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_DB: la_hueca_del_sabor_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Shadin2001
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: 5432
+    depends_on:
+      - kafka
+    ports:
+      - "3003:3003"
+    networks:
+      - hueca-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  hueca-net:
+    driver: bridge
