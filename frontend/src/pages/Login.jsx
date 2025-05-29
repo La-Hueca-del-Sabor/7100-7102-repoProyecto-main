@@ -4,7 +4,7 @@ import loginImage from '../assets/login.jpg';
 import logo from '../assets/logo.svg';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-
+import API_URL from '../config/api';
 
 const Login = () => {
 
@@ -43,8 +43,7 @@ const Login = () => {
 
     if (valid) {
       try {
-        const response = await fetch('http://localhost:3002/api/auth/login', {
-          method: 'POST',
+        const response = await fetch(`${API_URL}/api/auth/login`, {          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
