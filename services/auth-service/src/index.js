@@ -82,7 +82,7 @@ app.post('/api/auth/login', async (req, res) => {
 
         // Obtener perfil correspondiente según el rol
         const perfilTabla = {
-            gerencia: 'gerencia_perfiles',
+            gerente: 'gerencia_perfiles',
             mesero: 'mesero_perfiles',
             cocina: 'cocina_perfiles',
             caja: 'caja_perfiles'

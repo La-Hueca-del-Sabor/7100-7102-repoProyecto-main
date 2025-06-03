@@ -60,15 +60,7 @@ const Login = () => {
           const userRole = data.roleName;
           
           // Guardar el token y el rol en localStorage
-          // En la respuesta exitosa del login (línea ~62)
           localStorage.setItem('token', data.token);
-          localStorage.setItem('role', data.perfil.rol);
-          // Guardar TODOS los datos del usuario incluyendo el ID
-          localStorage.setItem('user', JSON.stringify({
-            id: data.perfil.id,
-            nombre: data.perfil.nombre,
-            rol: data.perfil.rol
-          }));
           localStorage.setItem('role', data.roleName);
           
           // Añadir logs de depuración

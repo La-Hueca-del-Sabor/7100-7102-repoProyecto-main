@@ -7,15 +7,14 @@ const cors = require('cors');
 const app = express();
 app.use(bodyParser.json());
 
-// Configuración de CORS
-const corsOptions = {
+// CORS
+app.use(cors({
   origin: 'http://localhost:3000',
-  methods: ['GET', 'POST', 'PUT'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
-};
-app.use(cors(corsOptions));
+}));
 
-// Conexión a PostgreSQL
+// Conexión
 const pool = new Pool({
   user: process.env.POSTGRES_USER || 'postgres',
   host: process.env.POSTGRES_HOST || 'host.docker.internal',
@@ -24,34 +23,33 @@ const pool = new Pool({
   port: process.env.POSTGRES_PORT || 5432,
 });
 
-// Middleware para verificar rol de mesero (role_id = 2)
-const isMesero = (req, res, next) => {
-  if (req.user && req.user.role_id === 2) {
-    next();
-  } else {
-    res.status(403).json({ error: 'Acceso denegado: Se requiere rol de mesero' });
-  }
-};
-
-// Obtener menú
-app.get('/api/menu', async (req, res) => {
+// Obtener pedidos con platos relacionados
+app.get('/api/pedidos-detalles', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT id, nombre, precio FROM platos WHERE stock_disponible > 0'
-    );
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+    const pedidosResult = await pool.query(`
+      SELECT p.id, p.mesa, p.estado, p.notas, p.hora_pedido, c.nombre AS cliente_nombre
+      FROM pedidos p
+      LEFT JOIN clientes c ON p.cliente_id = c.id
+    `);
 
-// Obtener pedidos
-app.get('/api/pedidos', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM pedidos');
-    res.json(result.rows);
+    const pedidos = pedidosResult.rows;
+
+    // Para cada pedido, obtener sus platos
+    for (const pedido of pedidos) {
+      const platosResult = await pool.query(`
+        SELECT pp.cantidad, pl.nombre
+        FROM pedido_platos pp
+        JOIN platos pl ON pp.plato_id = pl.id
+        WHERE pp.pedido_id = $1
+      `, [pedido.id]);
+
+      pedido.platos = platosResult.rows;
+    }
+
+    res.json(pedidos);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener detalles de los pedidos' });
   }
 });
 
@@ -64,8 +62,8 @@ app.post('/api/pedidos', async (req, res) => {
       return res.status(400).json({ error: 'Formato de platos inválido' });
     }
 
+    // Verificar stock
     const stockValido = await verificarStock(platos);
-
     if (!stockValido.valido) {
       return res.status(409).json({
         error: 'Stock insuficiente',
@@ -73,59 +71,87 @@ app.post('/api/pedidos', async (req, res) => {
       });
     }
 
-    // 1️⃣ Primero, insertar cliente (o usar un cliente existente si aplica)
-    const nuevoClienteResult = await pool.query(
+    // Insertar cliente (si no existe)
+    const clienteResult = await pool.query(
       `INSERT INTO clientes(nombre, telefono)
        VALUES($1, $2)
        RETURNING id`,
       [cliente_nombre, cliente_telefono]
     );
-    const clienteId = nuevoClienteResult.rows[0].id;
+    const clienteId = clienteResult.rows[0].id;
 
-    // 2️⃣ Insertar el pedido
-    const nuevoPedidoResult = await pool.query(
+    // Insertar pedido
+    const pedidoResult = await pool.query(
       `INSERT INTO pedidos(mesa, estado, notas, mesero_id, cliente_id, status_id)
        VALUES($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [mesa, 'pendiente', notas, 1, clienteId, 1] // 👈 Aquí `1` para status_id inicial
+      [mesa, 'pendiente', notas, 1, clienteId, 1]
     );
-    
+    const pedido = pedidoResult.rows[0];
 
-    const nuevoPedido = nuevoPedidoResult.rows[0];
+    // Insertar platos asociados
+    for (const plato of platos) {
+      await pool.query(
+        `INSERT INTO pedido_platos(pedido_id, plato_id, cantidad, precio)
+         VALUES($1, $2, $3, (SELECT precio FROM platos WHERE id = $2))`,
+        [pedido.id, plato.id, plato.cantidad]
+      );
 
-    // 3️⃣ (Opcional) Insertar los platos relacionados (en tabla intermedia)
-    // Podrías agregar aquí la inserción a pedido_platos si corresponde.
+      // Descontar stock
+      await pool.query(
+        `UPDATE platos SET stock_disponible = stock_disponible - $1 WHERE id = $2`,
+        [plato.cantidad, plato.id]
+      );
+    }
 
-    res.status(201).json({
-      success: true,
-      pedido: nuevoPedido
-    });
+    res.status(201).json({ success: true, pedido });
   } catch (error) {
     console.error('Error real del backend:', error);
-    res.status(500).json({
-      error: 'Error interno',
-      debug: error.message
-    });
+    res.status(500).json({ error: 'Error interno', debug: error.message });
   }
 });
 
+// PUT: Marcar pedido como listo
+app.put('/api/pedidos/:id/marcar-listo', async (req, res) => {
+  const pedidoId = req.params.id;
+  try {
+    await pool.query(
+      `UPDATE pedidos SET estado = 'listo', status_id = 2 WHERE id = $1`,
+      [pedidoId]
+    );
+    res.json({ success: true, mensaje: 'Pedido marcado como listo' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar estado' });
+  }
+});
+
+// DELETE: Eliminar pedido
+app.delete('/api/pedidos/:id', async (req, res) => {
+  const pedidoId = req.params.id;
+  try {
+    await pool.query(`DELETE FROM pedido_platos WHERE pedido_id = $1`, [pedidoId]);
+    await pool.query(`DELETE FROM pedidos WHERE id = $1`, [pedidoId]);
+    res.json({ success: true, mensaje: 'Pedido eliminado' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar pedido' });
+  }
+});
 
 // Verificar stock
 const verificarStock = async (platos) => {
   const itemsSinStock = [];
-
   try {
     for (const plato of platos) {
       const result = await pool.query(
         'SELECT stock_disponible, nombre FROM platos WHERE id = $1',
         [plato.id]
       );
-
       if (!result.rows.length || result.rows[0].stock_disponible < plato.cantidad) {
         itemsSinStock.push(result.rows[0]?.nombre || `Plato ID ${plato.id}`);
       }
     }
-
     return {
       valido: itemsSinStock.length === 0,
       itemsSinStock
@@ -139,23 +165,13 @@ const verificarStock = async (platos) => {
 app.get('/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
-    const pedidosResult = await pool.query('SELECT * FROM pedidos');
-    res.status(200).json({
-      status: 'OK',
-      mensaje: 'El servicio está activo y la base de datos responde',
-      pedidos: pedidosResult.rows
-    });
+    res.status(200).json({ status: 'OK', mensaje: 'El servicio está activo' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      status: 'ERROR',
-      mensaje: 'Error al conectar con la base de datos o al obtener pedidos',
-      debug: process.env.NODE_ENV === 'development' ? error.stack : null
-    });
+    res.status(500).json({ status: 'ERROR', mensaje: 'Error al conectar con la base de datos' });
   }
 });
 
-// Iniciar servidor
 const PORT = process.env.PORT || 3004;
 app.listen(PORT, () => {
   console.log(`Servicio de pedidos corriendo en el puerto ${PORT}`);

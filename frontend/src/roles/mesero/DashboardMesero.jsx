@@ -35,7 +35,7 @@ const DashboardMesero = () => {
   // Cargar pedidos activos
   const fetchPedidos = async () => {
     try {
-      const response = await fetch("http://localhost:3004/api/pedidos");
+      const response = await fetch("http://localhost:3004/api/pedidos-detalles");
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       setPedidos(Array.isArray(data) ? data : []);
