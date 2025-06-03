@@ -16,8 +16,9 @@ const pool = new Pool({
 
 app.use(express.json());
 app.use(cors({
-    origin: 'http://localhost:3000',
-    credentials: true
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'] // Agregar headers necesarios
 }));
 
 // Endpoint para agregar un plato

@@ -42,7 +42,7 @@ app.get('/db-health', async (req, res) => {
 // Configuración de Kafka
 const kafka = new Kafka({
     clientId: 'auth-service',
-    brokers: ['localhost:9093']
+    brokers: ['localhost:9092']
 });
 
 app.use(express.json());
