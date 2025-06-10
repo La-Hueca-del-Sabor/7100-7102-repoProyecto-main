@@ -279,7 +279,7 @@ const [platosInventario, setPlatosInventario] = useState([]);
               color: "#808080" // Changed to gray color
             }}
           >
-            ¡Bienvenido {username}!
+            ¡Bienvenido Joselyn!
           </h1>
         </div>
         <section style={{ marginBottom: "2.5rem" }}>

@@ -5,10 +5,7 @@ import logo from '../assets/logo.svg';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
-
 const Login = () => {
-
-  console.log()
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -53,22 +50,10 @@ const Login = () => {
         if (!response.ok) {
           setBackendError(data.error || 'Error desconocido');
         } else {
-          // Mostrar el rol recibido para depuración
-          console.log('Rol recibido:', data);
-
-          // Usar el campo correcto del backend: roleName
-          const userRole = data.roleName;
-          
-          // Guardar el token y el rol en localStorage
           localStorage.setItem('token', data.token);
           localStorage.setItem('role', data.roleName);
-          
-          // Añadir logs de depuración
-          console.log('Token guardado:', data.token);
-          console.log('Rol guardado:', data.roleName);
-          console.log('Verificación de localStorage:', localStorage.getItem('role'));
 
-          switch (userRole) {
+          switch (data.roleName) {
             case 'mesero':
               navigate('/mesero');
               break;
@@ -78,29 +63,28 @@ const Login = () => {
             case 'cocina':
               navigate('/cocina');
               break;
-            case 'gerente': // Debe ser 'gerente', no 'gerencia'
+            case 'gerente':
               navigate('/gerencia');
               break;
             default:
-              setBackendError('Rol desconocido: ' + userRole);
+              setBackendError('Rol desconocido: ' + data.roleName);
           }
         }
       } catch (err) {
-        setBackendError('No se pudo conectar con el backend');
+        setBackendError('No se pudo conectar con el servidor');
       }
     }
   };
 
   return (
-    <main>
-      <div className="container-fluid">
-        <div className="row">
-          <div className="col-sm-6 login-section-wrapper">
-            <div className="brand-wrapper">
-              <img src={logo} alt="logo" className="logo" />
-            </div>
-            <div className="login-wrapper my-auto">
-              <h1 className="login-title">Iniciar Sesión</h1>
+    <div className="container-fluid">
+      <div className="login-container">
+        <div className="login-content">
+          <div className="login-form-section">
+            <div className="login-wrapper">
+              <div className="text-center mb-4">
+              </div>
+              <h1 className="login-title">Bienvenido</h1>
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
                   <label htmlFor="email">Correo Electrónico</label>
@@ -109,13 +93,13 @@ const Login = () => {
                     name="email"
                     id="email"
                     className="form-control"
-                    placeholder="email@ejemplo.com"
+                    placeholder="correo@ejemplo.com"
                     required
                   />
                   {emailError && <small className="text-danger">{emailError}</small>}
                 </div>
 
-                <div className="form-group mb-4">
+                <div className="form-group">
                   <label htmlFor="password">Contraseña</label>
                   <div className="input-group">
                     <input
@@ -127,45 +111,45 @@ const Login = () => {
                       required
                     />
                     <div className="input-group-append">
-                      <span
+                      <button
+                        type="button"
                         className="input-group-text"
                         onClick={() => setShowPassword(!showPassword)}
-                        style={{ cursor: 'pointer' }}
                       >
                         {showPassword ? <FaEyeSlash /> : <FaEye />}
-                      </span>
+                      </button>
                     </div>
                   </div>
                   {passwordError && <small className="text-danger">{passwordError}</small>}
                 </div>
 
-                <input
-                  name="login"
-                  id="login"
-                  className="btn btn-block login-btn"
-                  type="submit"
-                  value="Iniciar Sesión"
-                />
-                {backendError && <div className="text-danger mt-2">{backendError}</div>}
+                {backendError && (
+                  <div className="alert alert-danger" role="alert">
+                    {backendError}
+                  </div>
+                )}
+
+                <button type="submit" className="login-btn">
+                  Iniciar Sesión
+                </button>
               </form>
 
               <a href="#!" className="forgot-password-link">
                 ¿Olvidaste tu contraseña?
               </a>
+
               <p className="login-wrapper-footer-text">
                 ¿No tienes una cuenta?{' '}
-                <a href="#!" className="text-reset">
-                  Regístrate aquí
-                </a>
+                <a href="#!">Regístrate aquí</a>
               </p>
             </div>
           </div>
-          <div className="col-sm-6 px-0 d-none d-sm-block">
+          <div className="login-image-section">
             <img src={loginImage} alt="login" className="login-img" />
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 

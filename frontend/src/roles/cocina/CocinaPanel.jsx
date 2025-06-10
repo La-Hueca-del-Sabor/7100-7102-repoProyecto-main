@@ -24,38 +24,13 @@ const CocinaPanel = () => {
 
   useEffect(() => {
     fetchOrdenes();
+    
+    // Actualizar órdenes cada 30 segundos
+    const intervalId = setInterval(fetchOrdenes, 30000);
+    
+    // Limpiar intervalo al desmontar
+    return () => clearInterval(intervalId);
   }, []);
-
-  // Marcar pedido como listo
-  const handleMarcarListo = async (idOrden) => {
-    try {
-      const response = await fetch(
-        `http://localhost:3004/api/pedidos/${idOrden}/marcar-listo`,
-        { method: "PUT" }
-      );
-      if (!response.ok) throw new Error("Error al marcar pedido como listo");
-      await fetchOrdenes();
-    } catch (error) {
-      console.error(error);
-      setError("Error al marcar como listo");
-    }
-  };
-
-  // Eliminar pedido
-  const handleEliminarPedido = async (idOrden) => {
-    if (!window.confirm("¿Seguro que quieres eliminar este pedido?")) return;
-    try {
-      const response = await fetch(
-        `http://localhost:3004/api/pedidos/${idOrden}`,
-        { method: "DELETE" }
-      );
-      if (!response.ok) throw new Error("Error al eliminar pedido");
-      await fetchOrdenes();
-    } catch (error) {
-      console.error(error);
-      setError("Error al eliminar el pedido");
-    }
-  };
 
   // Cerrar sesión
   const handleLogout = () => {
@@ -98,19 +73,6 @@ const CocinaPanel = () => {
           Actualizar Órdenes
         </button>
         <button
-          style={{
-            background: "#444",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "0.7rem 1rem",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
-        >
-          Historial Completo
-        </button>
-        <button
           onClick={handleLogout}
           style={{
             background: "#ff4d4d",
@@ -150,9 +112,11 @@ const CocinaPanel = () => {
           ) : (
             <div
               style={{
-                display: "flex",
-                flexWrap: "wrap",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
                 gap: "1rem",
+                maxWidth: "1100px",
+                margin: "0 auto",
               }}
             >
               {ordenesPendientes.map((orden) => (
@@ -161,115 +125,118 @@ const CocinaPanel = () => {
                   style={{
                     background: "#fff",
                     borderRadius: 8,
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-                    width: "250px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    width: "100%",
+                    maxWidth: "300px",
                     padding: "1rem",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
+                    border: "1px solid #eee",
+                    margin: "0 auto",
                   }}
                 >
-                  <div style={{ marginBottom: "0.5rem" }}>
+                  <div style={{ marginBottom: "0.8rem" }}>
                     <div
                       style={{
-                        fontSize: "0.9rem",
+                        fontSize: "1.1rem",
                         fontWeight: "bold",
                         color: "#222",
-                        marginBottom: "0.3rem",
+                        marginBottom: "0.4rem",
+                        borderBottom: "2px solid #fdbb28",
+                        paddingBottom: "0.4rem",
                       }}
                     >
                       Pedido #{orden.id}
                     </div>
-                    <div style={{ fontSize: "0.85rem", color: "#555" }}>
+                    <div style={{ fontSize: "1rem", color: "#444", marginBottom: "0.3rem" }}>
                       Mesa: {orden.mesa || "N/A"}
                     </div>
-                    <div style={{ fontSize: "0.85rem", color: "#555" }}>
+                    <div style={{ fontSize: "1rem", color: "#444" }}>
                       Cliente: {orden.cliente_nombre || "N/A"}
                     </div>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "#777",
-                        marginTop: "0.5rem",
-                      }}
-                    >
-                      {orden.notas && `Notas: ${orden.notas}`}
-                    </div>
+                    {orden.notas && (
+                      <div
+                        style={{
+                          fontSize: "0.9rem",
+                          color: "#666",
+                          marginTop: "0.6rem",
+                          padding: "0.6rem",
+                          background: "#fff9e6",
+                          borderRadius: "6px",
+                          border: "1px dashed #fdbb28"
+                        }}
+                      >
+                        <strong>Notas:</strong> {orden.notas}
+                      </div>
+                    )}
                   </div>
 
-                  <div style={{ marginBottom: "0.5rem" }}>
-                    <h4 style={{ fontSize: "0.85rem", margin: "0.3rem 0" }}>
+                  <div style={{ marginBottom: "0.8rem" }}>
+                    <h4 style={{ 
+                      fontSize: "1.1rem", 
+                      margin: "0.4rem 0",
+                      color: "#222",
+                      borderBottom: "2px solid #4caf50",
+                      paddingBottom: "0.4rem"
+                    }}>
                       Platos:
                     </h4>
                     {orden.platos.length === 0 ? (
-                      <p style={{ fontSize: "0.8rem", color: "#666" }}>
+                      <p style={{ fontSize: "0.9rem", color: "#666" }}>
                         No hay platos.
                       </p>
                     ) : (
-                      orden.platos.map((plato, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "#333",
-                            marginLeft: "0.5rem",
-                          }}
-                        >
-                          - {plato.nombre} (x{plato.cantidad})
-                        </div>
-                      ))
+                      <div style={{ 
+                        background: "#f8f8f8",
+                        borderRadius: "6px",
+                        padding: "0.8rem",
+                        marginTop: "0.4rem"
+                      }}>
+                        {orden.platos.map((plato, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              fontSize: "1rem",
+                              color: "#333",
+                              padding: "0.4rem",
+                              borderBottom: idx !== orden.platos.length - 1 ? "1px solid #eee" : "none",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.4rem"
+                            }}
+                          >
+                            <span style={{
+                              background: "#4caf50",
+                              color: "white",
+                              borderRadius: "50%",
+                              width: "22px",
+                              height: "22px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "0.85rem",
+                              fontWeight: "bold"
+                            }}>
+                              {plato.cantidad}
+                            </span>
+                            <span style={{ flex: 1, fontWeight: "500" }}>{plato.nombre}</span>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
 
                   <div
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: "0.5rem",
-                      marginTop: "0.5rem",
-                    }}
-                  >
-                    <button
-                      onClick={() => handleMarcarListo(orden.id)}
-                      style={{
-                        flex: 1,
-                        background: "#4caf50",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: 4,
-                        padding: "0.4rem 0.5rem",
-                        fontSize: "0.8rem",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Marcar Listo
-                    </button>
-                    <button
-                      onClick={() => handleEliminarPedido(orden.id)}
-                      style={{
-                        flex: 1,
-                        background: "#d32f2f",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: 4,
-                        padding: "0.4rem 0.5rem",
-                        fontSize: "0.8rem",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: "0.7rem",
-                      color: "#999",
-                      marginTop: "0.3rem",
+                      fontSize: "0.85rem",
+                      color: "#666",
                       textAlign: "right",
+                      borderTop: "1px solid #eee",
+                      paddingTop: "0.6rem"
                     }}
                   >
-                    {orden.hora_pedido
+                    Hora: {orden.hora_pedido
                       ? new Date(orden.hora_pedido).toLocaleTimeString()
                       : "Hora no disponible"}
                   </div>

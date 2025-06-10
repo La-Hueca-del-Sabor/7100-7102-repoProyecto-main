@@ -27,17 +27,17 @@ const pool = new Pool({
 app.get('/api/pedidos-detalles', async (req, res) => {
   try {
     const pedidosResult = await pool.query(`
-      SELECT p.id, p.mesa, p.estado, p.notas, p.hora_pedido, c.nombre AS cliente_nombre
+      SELECT p.id, p.mesa, p.estado, p.notas, p.total, p.hora_pedido, c.nombre AS cliente_nombre, c.cedula
       FROM pedidos p
       LEFT JOIN clientes c ON p.cliente_id = c.id
     `);
 
     const pedidos = pedidosResult.rows;
 
-    // Para cada pedido, obtener sus platos
+    // Para cada pedido, obtener sus platos con precios
     for (const pedido of pedidos) {
       const platosResult = await pool.query(`
-        SELECT pp.cantidad, pl.nombre
+        SELECT pp.cantidad, pl.nombre, pl.id as plato_id, pl.precio
         FROM pedido_platos pp
         JOIN platos pl ON pp.plato_id = pl.id
         WHERE pp.pedido_id = $1
@@ -56,7 +56,7 @@ app.get('/api/pedidos-detalles', async (req, res) => {
 // Crear pedido
 app.post('/api/pedidos', async (req, res) => {
   try {
-    const { mesa, cliente_nombre, cliente_telefono, platos, notas } = req.body;
+    const { mesa, cliente_nombre, cedula, platos, notas } = req.body;
 
     if (!platos || !Array.isArray(platos)) {
       return res.status(400).json({ error: 'Formato de platos inválido' });
@@ -71,33 +71,44 @@ app.post('/api/pedidos', async (req, res) => {
       });
     }
 
-    // Insertar cliente (si no existe)
+    // Insertar cliente
     const clienteResult = await pool.query(
-      `INSERT INTO clientes(nombre, telefono)
+      `INSERT INTO clientes(nombre, cedula)
        VALUES($1, $2)
        RETURNING id`,
-      [cliente_nombre, cliente_telefono]
+      [cliente_nombre, cedula]
     );
     const clienteId = clienteResult.rows[0].id;
 
-    // Insertar pedido
+    // Calcular total del pedido
+    let totalPedido = 0;
+    for (const plato of platos) {
+      const result = await pool.query(
+        'SELECT precio FROM platos WHERE id = $1',
+        [plato.id]
+      );
+      if (result.rows.length > 0) {
+        const precio = result.rows[0].precio;
+        totalPedido += precio * plato.cantidad;
+      }
+    }
+
+    // Insertar pedido con total
     const pedidoResult = await pool.query(
-      `INSERT INTO pedidos(mesa, estado, notas, mesero_id, cliente_id, status_id)
-       VALUES($1, $2, $3, $4, $5, $6)
+      `INSERT INTO pedidos(mesa, estado, notas, mesero_id, cliente_id, status_id, total)
+       VALUES($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [mesa, 'pendiente', notas, 1, clienteId, 1]
+      [mesa, 'pendiente', notas, 1, clienteId, 1, totalPedido]
     );
     const pedido = pedidoResult.rows[0];
 
-    // Insertar platos asociados
+    // Insertar platos asociados y descontar stock
     for (const plato of platos) {
       await pool.query(
         `INSERT INTO pedido_platos(pedido_id, plato_id, cantidad, precio)
          VALUES($1, $2, $3, (SELECT precio FROM platos WHERE id = $2))`,
         [pedido.id, plato.id, plato.cantidad]
       );
-
-      // Descontar stock
       await pool.query(
         `UPDATE platos SET stock_disponible = stock_disponible - $1 WHERE id = $2`,
         [plato.cantidad, plato.id]
@@ -111,6 +122,7 @@ app.post('/api/pedidos', async (req, res) => {
   }
 });
 
+
 // PUT: Marcar pedido como listo
 app.put('/api/pedidos/:id/marcar-listo', async (req, res) => {
   const pedidoId = req.params.id;
@@ -120,6 +132,36 @@ app.put('/api/pedidos/:id/marcar-listo', async (req, res) => {
       [pedidoId]
     );
     res.json({ success: true, mensaje: 'Pedido marcado como listo' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar estado' });
+  }
+});
+
+// PUT: Marcar pedido como entregado
+app.put('/api/pedidos/:id/marcar-entregado', async (req, res) => {
+  const pedidoId = req.params.id;
+  try {
+    await pool.query(
+      `UPDATE pedidos SET estado = 'ENTREGADO', status_id = 2 WHERE id = $1`,
+      [pedidoId]
+    );
+    res.json({ success: true, mensaje: 'Pedido marcado como entregado' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar estado' });
+  }
+});
+
+// PUT: Marcar pedido como cobrado
+app.put('/api/pedidos/:id/cobrar', async (req, res) => {
+  const pedidoId = req.params.id;
+  try {
+    await pool.query(
+      `UPDATE pedidos SET estado = 'COBRADO', status_id = 3 WHERE id = $1`,
+      [pedidoId]
+    );
+    res.json({ success: true, mensaje: 'Pedido marcado como cobrado' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al actualizar estado' });
