@@ -6,12 +6,15 @@ import CajaDashboard from './roles/caja/CajaDashboard';
 import CocinaPanel from './roles/cocina/CocinaPanel';
 import PanelGerencia from './roles/gerencia/PanelGerencia';
 import Login from './pages/Login';
+import EmailVerification from './pages/EmailVerification';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
+        <Route path="/verify-email/:token" element={<EmailVerification />} />
         <Route
           path="/mesero"
           element={

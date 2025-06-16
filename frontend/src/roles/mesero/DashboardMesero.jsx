@@ -52,12 +52,7 @@ const DashboardMesero = () => {
       // Filtrar pedidos basado en el estado y tiempo de entrega
       const ahora = new Date();
       const pedidosFiltrados = data.filter(pedido => {
-        if (pedido.estado === "ENTREGADO") {
-          const tiempoEntrega = new Date(pedido.hora_pedido);
-          const diferenciaTiempo = (ahora - tiempoEntrega) / 1000 / 60; // diferencia en minutos
-          return diferenciaTiempo <= 3;
-        }
-        return true;
+        return pedido.estado !== "COBRADO" && pedido.estado !== "ENTREGADO";
       });
 
       const entregados = data.filter(pedido => {
