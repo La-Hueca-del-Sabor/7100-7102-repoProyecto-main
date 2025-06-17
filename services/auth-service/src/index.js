@@ -476,6 +476,112 @@ app.get('/api/auth/usuarios-aceptados', async (req, res) => {
   }
 });
 
+// Endpoint para solicitar restablecimiento de contraseña
+app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+        const { correo } = req.body;
+
+        // Verificar si el usuario existe
+        const userResult = await pool.query(
+            'SELECT id FROM usuarios WHERE correo = $1',
+            [correo]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ 
+                error: 'Usuario no encontrado',
+                message: 'No existe una cuenta con este correo electrónico'
+            });
+        }
+
+        // Generar token de restablecimiento y establecer expiración (24 horas)
+        const resetToken = generateToken();
+        const tokenExpiracion = new Date();
+        tokenExpiracion.setHours(tokenExpiracion.getHours() + 24);
+
+        // Guardar token en la base de datos
+        await pool.query(
+            `UPDATE usuarios 
+             SET reset_token = $1, reset_token_expiracion = $2
+             WHERE correo = $3`,
+            [resetToken, tokenExpiracion, correo]
+        );
+
+        // Enviar correo con enlace de restablecimiento
+        const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+        const mailOptions = {
+            from: EMAIL_CONFIG.user,
+            to: correo,
+            subject: 'Restablecimiento de Contraseña - La Hueca del Sabor',
+            html: `
+                <h1>Restablecimiento de Contraseña</h1>
+                <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
+                <a href="${resetLink}">Restablecer Contraseña</a>
+                <p>Este enlace expirará en 24 horas.</p>
+                <p>Si no solicitaste este restablecimiento, puedes ignorar este correo.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.json({ 
+            message: 'Se ha enviado un enlace de restablecimiento a tu correo electrónico'
+        });
+
+    } catch (error) {
+        console.error('Error en solicitud de restablecimiento:', error);
+        res.status(500).json({ 
+            error: 'Error interno del servidor',
+            details: error.message
+        });
+    }
+});
+
+// Endpoint para restablecer contraseña
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        // Verificar token y que no haya expirado
+        const userResult = await pool.query(
+            `SELECT id FROM usuarios 
+             WHERE reset_token = $1 
+             AND reset_token_expiracion > NOW()`,
+            [token]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(400).json({ 
+                error: 'Token inválido o expirado',
+                message: 'El enlace de restablecimiento es inválido o ha expirado'
+            });
+        }
+
+        // Generar nuevo hash de contraseña
+        const salt = await bcrypt.genSalt(6);
+        const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+        // Actualizar contraseña y limpiar token
+        await pool.query(
+            `UPDATE usuarios 
+             SET password_hash = $1, reset_token = NULL, reset_token_expiracion = NULL
+             WHERE reset_token = $2`,
+            [newPasswordHash, token]
+        );
+
+        res.json({ 
+            message: 'Contraseña actualizada exitosamente'
+        });
+
+    } catch (error) {
+        console.error('Error al restablecer contraseña:', error);
+        res.status(500).json({ 
+            error: 'Error interno del servidor',
+            details: error.message
+        });
+    }
+});
+
 // Iniciar servidor
 app.listen(port, () => {
     console.log(`🚀 Servicio de autenticación ejecutándose en el puerto ${port}`);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './Login.css';
 import loginImage from '../assets/login.jpg';
 import logo from '../assets/logo.svg';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const Login = () => {
@@ -213,9 +213,9 @@ const Login = () => {
                 </button>
               </form>
 
-              <a href="#!" className="forgot-password-link">
+              <Link to="/forgot-password" className="forgot-password-link">
                 ¿Olvidaste tu contraseña?
-              </a>
+              </Link>
 
               <p className="login-wrapper-footer-text">
                 ¿No tienes una cuenta?{' '}
