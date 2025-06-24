@@ -21,7 +21,6 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
     healthcheck:
       test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "localhost:9092"]
       interval: 10s
@@ -72,6 +71,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
   order-service:
     build:
       context: ../services/order-service
@@ -82,7 +82,7 @@ services:
       POSTGRES_PASSWORD: Shadin2001
       POSTGRES_HOST: host.docker.internal
       POSTGRES_PORT: 5432
-      JWT_SECRET: mysecretkey  # Añadir esta línea
+      JWT_SECRET: mysecretkey
     depends_on:
       - kafka
     ports:
@@ -95,7 +95,27 @@ services:
       timeout: 10s
       retries: 3
 
-
+  dashboard-service:
+    build: 
+      context: ../services/dashboard-service
+      dockerfile: Dockerfile
+    ports:
+      - "3010:3010"
+    environment:
+      POSTGRES_DB: la_hueca_del_sabor_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Shadin2001
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: 5432
+    depends_on:
+      - kafka
+    networks:
+      - hueca-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   hueca-net:
