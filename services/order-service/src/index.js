@@ -19,7 +19,7 @@ const pool = new Pool({
   user: process.env.POSTGRES_USER || 'postgres',
   host: process.env.POSTGRES_HOST || 'host.docker.internal',
   database: process.env.POSTGRES_DB || 'la_hueca_del_sabor_db',
-  password: process.env.POSTGRES_PASSWORD || 'Shadin2001',
+  password: process.env.POSTGRES_PASSWORD || '123',
   port: process.env.POSTGRES_PORT || 5432,
 });
 
@@ -119,6 +119,38 @@ app.post('/api/pedidos', async (req, res) => {
   } catch (error) {
     console.error('Error real del backend:', error);
     res.status(500).json({ error: 'Error interno', debug: error.message });
+  }
+});
+app.put('/api/pedidos/:id/cobrar', async (req, res) => {
+  const pedidoId = req.params.id;
+  const { metodo_pago_id } = req.body;
+
+  if (!metodo_pago_id) {
+    return res.status(400).json({ error: 'El método de pago es obligatorio.' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE pedidos
+       SET estado = 'COBRADO',
+           hora_pedido = NOW(),
+           payment_method = $1
+       WHERE id = $2
+       RETURNING *`,
+      [metodo_pago_id, pedidoId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+
+    res.json({
+      mensaje: 'Pedido cobrado exitosamente.',
+      pedido: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error al cobrar pedido:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 
@@ -270,6 +302,17 @@ app.put('/api/pedidos/:id/cancelar', async (req, res) => {
     res.status(500).json({ error: 'Error al cancelar el pedido' });
   } finally {
     client.release();
+  }
+});
+
+// Endpoint para obtener lista de métodos de pago
+app.get('/api/metodos-pago', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT id, nombre FROM payment_methods ORDER BY nombre ASC`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener métodos de pago:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 

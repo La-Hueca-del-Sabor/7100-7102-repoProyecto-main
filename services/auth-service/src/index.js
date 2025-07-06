@@ -59,7 +59,7 @@ const pool = new Pool({
     user: process.env.POSTGRES_USER || 'postgres',
     host: 'host.docker.internal',
     database: process.env.POSTGRES_DB || 'la_hueca_del_sabor_db',
-    password: process.env.POSTGRES_PASSWORD || 'Shadin2001',
+    password: process.env.POSTGRES_PASSWORD || '123',
     port: 5432,
 });
 

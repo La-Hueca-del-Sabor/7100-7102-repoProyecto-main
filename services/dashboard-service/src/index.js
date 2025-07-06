@@ -15,7 +15,7 @@ const pool = new Pool({
   user: process.env.POSTGRES_USER || 'postgres',
   host: process.env.POSTGRES_HOST || 'host.docker.internal',
   database: process.env.POSTGRES_DB || 'la_hueca_del_sabor_db',
-  password: process.env.POSTGRES_PASSWORD || 'Shadin2001',
+  password: process.env.POSTGRES_PASSWORD || '123',
   port: parseInt(process.env.POSTGRES_PORT || '5432'),
 });
 
@@ -288,6 +288,42 @@ app.get('/api/productos', async (req, res) => {
       error: 'Error interno del servidor',
       details: error.message 
     });
+  }
+});
+
+// Endpoint metodos de pago
+app.get('/api/dashboard/ingresos-metodo-pago', async (req, res) => {
+  try {
+    const { fecha_inicio, fecha_fin } = req.query;
+    const queryParams = [];
+    let whereClause = 'WHERE 1=1';
+    let paramCount = 1;
+
+    if (fecha_inicio) {
+      whereClause += ` AND p.hora_pedido::date >= $${paramCount++}`;
+      queryParams.push(fecha_inicio);
+    }
+
+    if (fecha_fin) {
+      whereClause += ` AND p.hora_pedido::date <= $${paramCount++}`;
+      queryParams.push(fecha_fin);
+    }
+
+    const query = `
+      SELECT m.nombre AS label,
+             ROUND(SUM(p.total)::numeric, 2) AS value
+      FROM pedidos p
+      JOIN payment_methods m ON p.payment_method = m.id
+      ${whereClause}
+      GROUP BY m.nombre
+      ORDER BY value DESC;
+    `;
+
+    const result = await pool.query(query, queryParams);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener ingresos por método de pago:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 

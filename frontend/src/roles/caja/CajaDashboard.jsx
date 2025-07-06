@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import MenuProductos from "../../components/MenuProductos";
 import html2pdf from "html2pdf.js";
+//icnonografia
+import { FaCashRegister, FaList, FaHistory, FaSignOutAlt } from 'react-icons/fa';
 
 // Componente del Comprobante
 const ComprobanteContenido = ({ orden }) => {
@@ -201,43 +203,62 @@ const CajaDashboard = () => {
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
   const [ordenDesc, setOrdenDesc] = useState(false); // false: ascendente (orden de llegada)
-  const [busqueda, setBusqueda] = useState('');
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [fechaFin, setFechaFin] = useState('');
-  const [estadoFiltro, setEstadoFiltro] = useState('TODOS');
-  const [filtroNombre, setFiltroNombre] = useState('');
+  const [busqueda, setBusqueda] = useState("");
+  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaFin, setFechaFin] = useState("");
+  const [estadoFiltro, setEstadoFiltro] = useState("TODOS");
+  const [filtroNombre, setFiltroNombre] = useState("");
   const [soloStockBajo, setSoloStockBajo] = useState(false);
-  const [filtroTransCliente, setFiltroTransCliente] = useState('');
-  const [filtroTransMesa, setFiltroTransMesa] = useState('');
-  const [filtroTransDesde, setFiltroTransDesde] = useState('');
-  const [filtroTransHasta, setFiltroTransHasta] = useState('');
-  const [filtroTransMontoMin, setFiltroTransMontoMin] = useState('');
-  const [filtroTransMontoMax, setFiltroTransMontoMax] = useState('');
-  const [filtroTransId, setFiltroTransId] = useState('');
+  const [filtroTransCliente, setFiltroTransCliente] = useState("");
+  const [filtroTransMesa, setFiltroTransMesa] = useState("");
+  const [filtroTransDesde, setFiltroTransDesde] = useState("");
+  const [filtroTransHasta, setFiltroTransHasta] = useState("");
+  const [filtroTransMontoMin, setFiltroTransMontoMin] = useState("");
+  const [filtroTransMontoMax, setFiltroTransMontoMax] = useState("");
+  const [filtroTransId, setFiltroTransId] = useState("");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-
+//Componentes Metodos de Pago
+const [metodoPago, setMetodoPago] = useState("");
+const [metodosPago, setMetodosPago] = useState([]);
+const [errorMetodoPago, setErrorMetodoPago] = useState(false);
 
   // Paginación para transacciones
-const [paginaTrans, setPaginaTrans] = useState(1);
-const [porPaginaTrans, setPorPaginaTrans] = useState(10);
+  const [paginaTrans, setPaginaTrans] = useState(1);
+  const [porPaginaTrans, setPorPaginaTrans] = useState(10);
 
-const totalPaginasTrans = Math.ceil(transacciones.length / porPaginaTrans);
+  const totalPaginasTrans = Math.ceil(transacciones.length / porPaginaTrans);
 
-const transaccionesFiltradas = transacciones.filter(t => {
-  const coincideCliente = !filtroTransCliente || t.cliente_nombre.toLowerCase().includes(filtroTransCliente.toLowerCase());
-  const coincideMesa = !filtroTransMesa || t.mesa?.toString() === filtroTransMesa;
-  const coincideDesde = !filtroTransDesde || new Date(t.hora_pedido) >= new Date(filtroTransDesde + 'T00:00:00');
-  const coincideHasta = !filtroTransHasta || new Date(t.hora_pedido) <= new Date(filtroTransHasta + 'T23:59:59');
-  const coincideMontoMin = !filtroTransMontoMin || Number(t.total) >= Number(filtroTransMontoMin);
-  const coincideMontoMax = !filtroTransMontoMax || Number(t.total) <= Number(filtroTransMontoMax);
-  const coincideId = !filtroTransId || t.id.toString() === filtroTransId;
-  return coincideCliente && coincideMesa && coincideDesde && coincideHasta && coincideMontoMin && coincideMontoMax && coincideId;
-});
-const transaccionesPaginadas = transaccionesFiltradas.slice(
-  (paginaTrans - 1) * porPaginaTrans,
-  paginaTrans * porPaginaTrans
-);
-
+  const transaccionesFiltradas = transacciones.filter((t) => {
+    const coincideCliente =
+      !filtroTransCliente ||
+      t.cliente_nombre.toLowerCase().includes(filtroTransCliente.toLowerCase());
+    const coincideMesa =
+      !filtroTransMesa || t.mesa?.toString() === filtroTransMesa;
+    const coincideDesde =
+      !filtroTransDesde ||
+      new Date(t.hora_pedido) >= new Date(filtroTransDesde + "T00:00:00");
+    const coincideHasta =
+      !filtroTransHasta ||
+      new Date(t.hora_pedido) <= new Date(filtroTransHasta + "T23:59:59");
+    const coincideMontoMin =
+      !filtroTransMontoMin || Number(t.total) >= Number(filtroTransMontoMin);
+    const coincideMontoMax =
+      !filtroTransMontoMax || Number(t.total) <= Number(filtroTransMontoMax);
+    const coincideId = !filtroTransId || t.id.toString() === filtroTransId;
+    return (
+      coincideCliente &&
+      coincideMesa &&
+      coincideDesde &&
+      coincideHasta &&
+      coincideMontoMin &&
+      coincideMontoMax &&
+      coincideId
+    );
+  });
+  const transaccionesPaginadas = transaccionesFiltradas.slice(
+    (paginaTrans - 1) * porPaginaTrans,
+    paginaTrans * porPaginaTrans
+  );
 
   const handleGenerarPDF = async () => {
     if (!ordenCobrada || !ordenCobrada.platos) {
@@ -266,7 +287,9 @@ const transaccionesPaginadas = transaccionesFiltradas.slice(
   const fetchOrdenes = async () => {
     setLoadingOrdenes(true);
     try {
-      const response = await fetch("http://localhost:3004/api/pedidos-detalles");
+      const response = await fetch(
+        "http://localhost:3004/api/pedidos-detalles"
+      );
       if (!response.ok) throw new Error("Error al obtener las órdenes");
       const data = await response.json();
 
@@ -303,7 +326,9 @@ const transaccionesPaginadas = transaccionesFiltradas.slice(
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const response = await fetch("http://localhost:3003/api/inventory/platos");
+        const response = await fetch(
+          "http://localhost:3003/api/inventory/platos"
+        );
         if (!response.ok) throw new Error("Error al obtener el menú");
         const data = await response.json();
         setProductos(data);
@@ -315,6 +340,12 @@ const transaccionesPaginadas = transaccionesFiltradas.slice(
     };
     fetchMenu();
     fetchOrdenes();
+    //Metodo de pago
+
+    fetch("http://localhost:3004/api/metodos-pago")
+      .then((res) => res.json())
+      .then((data) => setMetodosPago(data))
+      .catch((err) => console.error("Error al cargar métodos de pago:", err));
 
     // Actualizar las órdenes cada 30 segundos
     const interval = setInterval(fetchOrdenes, 30000);
@@ -326,9 +357,9 @@ const transaccionesPaginadas = transaccionesFiltradas.slice(
   }, [estadoFiltro, busqueda, fechaInicio, fechaFin]);
 
   // Paginación para transacciones
-useEffect(() => {
-  setPaginaTrans(1);
-}, [transacciones, porPaginaTrans]);
+  useEffect(() => {
+    setPaginaTrans(1);
+  }, [transacciones, porPaginaTrans]);
 
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -344,16 +375,23 @@ useEffect(() => {
   };
 
   const handleCobrarOrden = async (idOrden) => {
+    if (!metodoPago) {
+      setErrorMetodoPago(true);
+      return;
+    }
+  
     try {
       const response = await fetch(
         `http://localhost:3004/api/pedidos/${idOrden}/cobrar`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ metodo_pago_id: metodoPago }) // 
         }
       );
-
+  
       if (!response.ok) throw new Error("Error al procesar el pago");
+  
       setShowConfirmModal(false);
       setOrdenCobrada(ordenParaCobrar);
       setOrdenParaCobrar(null);
@@ -363,6 +401,7 @@ useEffect(() => {
       console.error("Error en el cobro:", error);
     }
   };
+  
 
   const handleConfirmarCobro = (orden) => {
     setOrdenParaCobrar(orden);
@@ -410,44 +449,47 @@ useEffect(() => {
   // Calcula el total de páginas
 
   // Ordena las órdenes filtradas por fecha/hora de entrega antes de paginar
-// Filtrado y ordenamiento combinado
-const ordenesFiltradas = ordenes.filter(o => {
-  const coincideBusqueda =
-    o.cliente_nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    o.mesa?.toString().includes(busqueda);
+  // Filtrado y ordenamiento combinado
+  const ordenesFiltradas = ordenes.filter((o) => {
+    const coincideBusqueda =
+      o.cliente_nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      o.mesa?.toString().includes(busqueda);
 
-  const coincideEstado = estadoFiltro === 'TODOS' || o.estado === estadoFiltro;
+    const coincideEstado =
+      estadoFiltro === "TODOS" || o.estado === estadoFiltro;
 
-  const fechaPedido = new Date(o.hora_pedido);
-  const desde = fechaInicio ? new Date(fechaInicio + 'T00:00:00') : null;
-  const hasta = fechaFin ? new Date(fechaFin + 'T23:59:59') : null;
+    const fechaPedido = new Date(o.hora_pedido);
+    const desde = fechaInicio ? new Date(fechaInicio + "T00:00:00") : null;
+    const hasta = fechaFin ? new Date(fechaFin + "T23:59:59") : null;
 
-  const coincideFecha =
-    (!desde || fechaPedido >= desde) &&
-    (!hasta || fechaPedido <= hasta);
+    const coincideFecha =
+      (!desde || fechaPedido >= desde) && (!hasta || fechaPedido <= hasta);
 
-  return coincideBusqueda && coincideEstado && coincideFecha;
-});
+    return coincideBusqueda && coincideEstado && coincideFecha;
+  });
 
-const ordenesOrdenadas = [...ordenesFiltradas].sort((a, b) => {
-  const fechaA = new Date(a.hora_pedido);
-  const fechaB = new Date(b.hora_pedido);
-  return ordenDesc ? fechaB - fechaA : fechaA - fechaB;
-});
+  const ordenesOrdenadas = [...ordenesFiltradas].sort((a, b) => {
+    const fechaA = new Date(a.hora_pedido);
+    const fechaB = new Date(b.hora_pedido);
+    return ordenDesc ? fechaB - fechaA : fechaA - fechaB;
+  });
 
-const totalPaginas = Math.ceil(ordenesOrdenadas.length / porPagina);
+  const totalPaginas = Math.ceil(ordenesOrdenadas.length / porPagina);
 
-const ordenesPaginadas = ordenesOrdenadas.slice(
-  (pagina - 1) * porPagina,
-  pagina * porPagina
-);
+  const ordenesPaginadas = ordenesOrdenadas.slice(
+    (pagina - 1) * porPagina,
+    pagina * porPagina
+  );
 
-const productosFiltrados = productos.filter(p => {
-  const coincideNombre = p.nombre.toLowerCase().includes(filtroNombre.toLowerCase());
-  const coincideStock = !soloStockBajo || (p.stock_disponible !== undefined && p.stock_disponible <= 5);
-  return coincideNombre && coincideStock;
-});
-
+  const productosFiltrados = productos.filter((p) => {
+    const coincideNombre = p.nombre
+      .toLowerCase()
+      .includes(filtroNombre.toLowerCase());
+    const coincideStock =
+      !soloStockBajo ||
+      (p.stock_disponible !== undefined && p.stock_disponible <= 5);
+    return coincideNombre && coincideStock;
+  });
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#fafbfc" }}>
@@ -482,8 +524,12 @@ const productosFiltrados = productos.filter(p => {
             padding: "0.7rem 1rem",
             fontWeight: 600,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaCashRegister color={mostrarOrdenes ? "#222" : "#fff"} size={18} />
           Órdenes por Cobrar
         </button>
         <button
@@ -496,8 +542,12 @@ const productosFiltrados = productos.filter(p => {
             padding: "0.7rem 1rem",
             fontWeight: 600,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaList color={mostrarMenu ? "#222" : "#fff"} size={18} />
           Menú
         </button>
         <button
@@ -510,8 +560,12 @@ const productosFiltrados = productos.filter(p => {
             padding: "0.7rem 1rem",
             fontWeight: 500,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaHistory color={mostrarTransacciones ? "#222" : "#fff"} size={18} />
           Ver Transacciones
         </button>
         <button
@@ -525,8 +579,12 @@ const productosFiltrados = productos.filter(p => {
             fontWeight: 600,
             cursor: "pointer",
             marginTop: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaSignOutAlt color="white" size={18} />
           Cerrar Sesión
         </button>
       </aside>
@@ -559,20 +617,23 @@ const productosFiltrados = productos.filter(p => {
         {mostrarOrdenes && (
           <div style={{ marginTop: "2rem" }}>
             <h2 style={{ marginBottom: "1rem" }}>Órdenes por Cobrar</h2>
-                  {loadingOrdenes ? (
-                      <div style={{ textAlign: "center", margin: "2rem" }}>
-                        <div className="spinner" style={{
-                          border: "4px solid #f3f3f3",
-                          borderTop: "4px solid #fdbb28",
-                          borderRadius: "50%",
-                          width: "40px",
-                          height: "40px",
-                          animation: "spin 1s linear infinite",
-                          margin: "0 auto 1rem"
-                        }} />
-                        <p>Cargando órdenes...</p>
-                      </div>
-                    ) : error ? (
+            {loadingOrdenes ? (
+              <div style={{ textAlign: "center", margin: "2rem" }}>
+                <div
+                  className="spinner"
+                  style={{
+                    border: "4px solid #f3f3f3",
+                    borderTop: "4px solid #fdbb28",
+                    borderRadius: "50%",
+                    width: "40px",
+                    height: "40px",
+                    animation: "spin 1s linear infinite",
+                    margin: "0 auto 1rem",
+                  }}
+                />
+                <p>Cargando órdenes...</p>
+              </div>
+            ) : error ? (
               <p style={{ color: "red" }}>Error: {error}</p>
             ) : ordenes.length === 0 ? (
               <div
@@ -595,18 +656,25 @@ const productosFiltrados = productos.filter(p => {
                   padding: "1rem",
                 }}
               >
-                
-                <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+                <div
+                  style={{
+                    marginBottom: "1rem",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "1rem",
+                    alignItems: "center",
+                  }}
+                >
                   {/* Filtro por estado */}
                   <label>
                     Estado:&nbsp;
                     <select
                       value={estadoFiltro}
-                      onChange={e => setEstadoFiltro(e.target.value)}
+                      onChange={(e) => setEstadoFiltro(e.target.value)}
                       style={{
                         padding: "0.5rem",
                         border: "1px solid #ddd",
-                        borderRadius: "4px"
+                        borderRadius: "4px",
                       }}
                     >
                       <option value="TODOS">Todos</option>
@@ -629,11 +697,11 @@ const productosFiltrados = productos.filter(p => {
                         haceUnMes.setMonth(hoy.getMonth() - 1);
                         return haceUnMes.toISOString().split("T")[0];
                       })()}
-                      onChange={e => setFechaInicio(e.target.value)}
+                      onChange={(e) => setFechaInicio(e.target.value)}
                       style={{
                         padding: "0.5rem",
                         border: "1px solid #ddd",
-                        borderRadius: "4px"
+                        borderRadius: "4px",
                       }}
                     />
                   </label>
@@ -644,17 +712,20 @@ const productosFiltrados = productos.filter(p => {
                       type="date"
                       value={fechaFin}
                       max={new Date().toISOString().split("T")[0]}
-                      min={fechaInicio || (() => {
-                        const hoy = new Date();
-                        const haceUnMes = new Date();
-                        haceUnMes.setMonth(hoy.getMonth() - 1);
-                        return haceUnMes.toISOString().split("T")[0];
-                      })()}
-                      onChange={e => setFechaFin(e.target.value)}
+                      min={
+                        fechaInicio ||
+                        (() => {
+                          const hoy = new Date();
+                          const haceUnMes = new Date();
+                          haceUnMes.setMonth(hoy.getMonth() - 1);
+                          return haceUnMes.toISOString().split("T")[0];
+                        })()
+                      }
+                      onChange={(e) => setFechaFin(e.target.value)}
                       style={{
                         padding: "0.5rem",
                         border: "1px solid #ddd",
-                        borderRadius: "4px"
+                        borderRadius: "4px",
                       }}
                     />
                   </label>
@@ -663,21 +734,28 @@ const productosFiltrados = productos.filter(p => {
                     type="text"
                     placeholder="Buscar por cliente..."
                     value={busqueda}
-                    onChange={e => setBusqueda(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ""))}
+                    onChange={(e) =>
+                      setBusqueda(
+                        e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "")
+                      )
+                    }
                     style={{
                       padding: "0.5rem",
                       border: "1px solid #ddd",
                       borderRadius: "4px",
-                      width: "180px"
+                      width: "180px",
                     }}
                   />
-                  {(busqueda || fechaInicio || fechaFin || estadoFiltro !== "TODOS") && (
+                  {(busqueda ||
+                    fechaInicio ||
+                    fechaFin ||
+                    estadoFiltro !== "TODOS") && (
                     <button
                       onClick={() => {
-                        setBusqueda('');
-                        setFechaInicio('');
-                        setFechaFin('');
-                        setEstadoFiltro('TODOS');
+                        setBusqueda("");
+                        setFechaInicio("");
+                        setFechaFin("");
+                        setEstadoFiltro("TODOS");
                       }}
                       style={{
                         background: "#666",
@@ -685,7 +763,7 @@ const productosFiltrados = productos.filter(p => {
                         border: "none",
                         borderRadius: "4px",
                         padding: "0.5rem 1rem",
-                        cursor: "pointer"
+                        cursor: "pointer",
                       }}
                     >
                       Limpiar filtros
@@ -711,12 +789,19 @@ const productosFiltrados = productos.filter(p => {
                   </thead>
                   <tbody>
                     {ordenesPaginadas.map((orden) => (
-                      <tr key={orden.id} style={{ borderBottom: "1px solid #eee" }}>
+                      <tr
+                        key={orden.id}
+                        style={{ borderBottom: "1px solid #eee" }}
+                      >
                         <td style={{ padding: "12px" }}>
                           {new Date(orden.hora_pedido).toLocaleString()}
                         </td>
-                        <td style={{ padding: "12px" }}>{orden.mesa || "N/A"}</td>
-                        <td style={{ padding: "12px" }}>{orden.cliente_nombre}</td>
+                        <td style={{ padding: "12px" }}>
+                          {orden.mesa || "N/A"}
+                        </td>
+                        <td style={{ padding: "12px" }}>
+                          {orden.cliente_nombre}
+                        </td>
                         <td style={{ padding: "12px" }}>${orden.total}</td>
                         <td style={{ padding: "12px" }}>
                           <span
@@ -801,7 +886,9 @@ const productosFiltrados = productos.filter(p => {
                       Página {pagina} de {totalPaginas}
                     </span>
                     <button
-                      onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                      onClick={() =>
+                        setPagina((p) => Math.min(totalPaginas, p + 1))
+                      }
                       disabled={pagina === totalPaginas}
                     >
                       Siguiente
@@ -842,19 +929,32 @@ const productosFiltrados = productos.filter(p => {
                 }}
               >
                 {/* Filtros para transacciones */}
-                <div style={{ marginBottom: "1rem", display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center" }}>
+                <div
+                  style={{
+                    marginBottom: "1rem",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "1rem",
+                    alignItems: "center",
+                  }}
+                >
                   <input
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     placeholder="ID"
                     value={filtroTransId}
-                    onChange={e => {
+                    onChange={(e) => {
                       // Solo números
                       const val = e.target.value.replace(/[^0-9]/g, "");
                       setFiltroTransId(val);
                     }}
-                    style={{ width: 60, padding: "0.3rem 0.7rem", borderRadius: 4, border: "1px solid #ddd" }}
+                    style={{
+                      width: 60,
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: 4,
+                      border: "1px solid #ddd",
+                    }}
                     maxLength={8}
                   />
                   <input
@@ -863,24 +963,37 @@ const productosFiltrados = productos.filter(p => {
                     pattern="[0-9]*"
                     placeholder="Mesa"
                     value={filtroTransMesa}
-                    onChange={e => {
+                    onChange={(e) => {
                       // Solo números
                       const val = e.target.value.replace(/[^0-9]/g, "");
                       setFiltroTransMesa(val);
                     }}
-                    style={{ width: 60, padding: "0.3rem 0.7rem", borderRadius: 4, border: "1px solid #ddd" }}
+                    style={{
+                      width: 60,
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: 4,
+                      border: "1px solid #ddd",
+                    }}
                     maxLength={3}
                   />
                   <input
                     type="text"
                     placeholder="Cliente"
                     value={filtroTransCliente}
-                    onChange={e => {
+                    onChange={(e) => {
                       // Solo letras y espacios
-                      const val = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                      const val = e.target.value.replace(
+                        /[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g,
+                        ""
+                      );
                       setFiltroTransCliente(val);
                     }}
-                    style={{ width: 120, padding: "0.3rem 0.7rem", borderRadius: 4, border: "1px solid #ddd" }}
+                    style={{
+                      width: 120,
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: 4,
+                      border: "1px solid #ddd",
+                    }}
                     maxLength={30}
                   />
                   <input
@@ -893,30 +1006,45 @@ const productosFiltrados = productos.filter(p => {
                       haceUnMes.setMonth(hoy.getMonth() - 1);
                       return haceUnMes.toISOString().split("T")[0];
                     })()}
-                    onChange={e => setFiltroTransDesde(e.target.value)}
-                    style={{ padding: "0.3rem 0.7rem", borderRadius: 4, border: "1px solid #ddd" }}
+                    onChange={(e) => setFiltroTransDesde(e.target.value)}
+                    style={{
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: 4,
+                      border: "1px solid #ddd",
+                    }}
                   />
                   <input
                     type="date"
                     value={filtroTransHasta}
                     max={new Date().toISOString().split("T")[0]}
-                    min={filtroTransDesde || (() => {
-                      const hoy = new Date();
-                      const haceUnMes = new Date();
-                      haceUnMes.setMonth(hoy.getMonth() - 1);
-                      return haceUnMes.toISOString().split("T")[0];
-                    })()}
-                    onChange={e => setFiltroTransHasta(e.target.value)}
-                    style={{ padding: "0.3rem 0.7rem", borderRadius: 4, border: "1px solid #ddd" }}
+                    min={
+                      filtroTransDesde ||
+                      (() => {
+                        const hoy = new Date();
+                        const haceUnMes = new Date();
+                        haceUnMes.setMonth(hoy.getMonth() - 1);
+                        return haceUnMes.toISOString().split("T")[0];
+                      })()
+                    }
+                    onChange={(e) => setFiltroTransHasta(e.target.value)}
+                    style={{
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: 4,
+                      border: "1px solid #ddd",
+                    }}
                   />
-                  {(filtroTransCliente || filtroTransMesa || filtroTransDesde || filtroTransHasta || filtroTransId) && (
+                  {(filtroTransCliente ||
+                    filtroTransMesa ||
+                    filtroTransDesde ||
+                    filtroTransHasta ||
+                    filtroTransId) && (
                     <button
                       onClick={() => {
-                        setFiltroTransCliente('');
-                        setFiltroTransMesa('');
-                        setFiltroTransDesde('');
-                        setFiltroTransHasta('');
-                        setFiltroTransId('');
+                        setFiltroTransCliente("");
+                        setFiltroTransMesa("");
+                        setFiltroTransDesde("");
+                        setFiltroTransHasta("");
+                        setFiltroTransId("");
                       }}
                       style={{
                         background: "#666",
@@ -924,7 +1052,7 @@ const productosFiltrados = productos.filter(p => {
                         border: "none",
                         borderRadius: "4px",
                         padding: "0.5rem 1rem",
-                        cursor: "pointer"
+                        cursor: "pointer",
                       }}
                     >
                       Limpiar filtros
@@ -932,13 +1060,26 @@ const productosFiltrados = productos.filter(p => {
                   )}
                 </div>
                 {/* Selector de cantidad por página */}
-                <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                <div
+                  style={{
+                    marginBottom: "1rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "1rem",
+                  }}
+                >
                   <label>
                     Mostrar&nbsp;
                     <select
                       value={porPaginaTrans}
-                      onChange={e => setPorPaginaTrans(Number(e.target.value))}
-                      style={{ padding: "0.3rem 0.7rem", borderRadius: 4, border: "1px solid #ddd" }}
+                      onChange={(e) =>
+                        setPorPaginaTrans(Number(e.target.value))
+                      }
+                      style={{
+                        padding: "0.3rem 0.7rem",
+                        borderRadius: 4,
+                        border: "1px solid #ddd",
+                      }}
                     >
                       <option value={10}>10</option>
                       <option value={20}>20</option>
@@ -961,11 +1102,20 @@ const productosFiltrados = productos.filter(p => {
                   </thead>
                   <tbody>
                     {transaccionesPaginadas.map((transaccion) => (
-                      <tr key={transaccion.id} style={{ borderBottom: "1px solid #eee" }}>
+                      <tr
+                        key={transaccion.id}
+                        style={{ borderBottom: "1px solid #eee" }}
+                      >
                         <td style={{ padding: "12px" }}>#{transaccion.id}</td>
-                        <td style={{ padding: "12px" }}>{transaccion.mesa || "N/A"}</td>
-                        <td style={{ padding: "12px" }}>{transaccion.cliente_nombre}</td>
-                        <td style={{ padding: "12px" }}>${transaccion.total}</td>
+                        <td style={{ padding: "12px" }}>
+                          {transaccion.mesa || "N/A"}
+                        </td>
+                        <td style={{ padding: "12px" }}>
+                          {transaccion.cliente_nombre}
+                        </td>
+                        <td style={{ padding: "12px" }}>
+                          ${transaccion.total}
+                        </td>
                         <td style={{ padding: "12px" }}>
                           {new Date(transaccion.hora_pedido).toLocaleString()}
                         </td>
@@ -990,7 +1140,15 @@ const productosFiltrados = productos.filter(p => {
                 </table>
                 {/* Controles de paginación */}
                 {totalPaginasTrans > 1 && (
-                  <div style={{ margin: "1rem 0", display: "flex", justifyContent: "center", alignItems: "center", gap: "1rem" }}>
+                  <div
+                    style={{
+                      margin: "1rem 0",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: "1rem",
+                    }}
+                  >
                     <button
                       onClick={() => setPaginaTrans((p) => Math.max(1, p - 1))}
                       disabled={paginaTrans === 1}
@@ -1001,7 +1159,11 @@ const productosFiltrados = productos.filter(p => {
                       Página {paginaTrans} de {totalPaginasTrans}
                     </span>
                     <button
-                      onClick={() => setPaginaTrans((p) => Math.min(totalPaginasTrans, p + 1))}
+                      onClick={() =>
+                        setPaginaTrans((p) =>
+                          Math.min(totalPaginasTrans, p + 1)
+                        )
+                      }
                       disabled={paginaTrans === totalPaginasTrans}
                     >
                       Siguiente
@@ -1013,33 +1175,55 @@ const productosFiltrados = productos.filter(p => {
           </div>
         )}
 
-        {mostrarMenu && (
-          loading ? (
+        {mostrarMenu &&
+          (loading ? (
             <p>Cargando menú...</p>
           ) : error ? (
             <p style={{ color: "red" }}>Error: {error}</p>
           ) : (
             <div style={{ marginTop: "2rem", width: "100%", maxWidth: 1000 }}>
-              <h2 style={{ fontWeight: 700, fontSize: "2rem", marginBottom: "1.5rem" }}>Menú de Productos</h2>
-              
+              <h2
+                style={{
+                  fontWeight: 700,
+                  fontSize: "2rem",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                Menú de Productos
+              </h2>
+
               {/* Filtros para el menú */}
-              <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  marginBottom: "1rem",
+                  display: "flex",
+                  gap: "1rem",
+                  flexWrap: "wrap",
+                }}
+              >
                 <input
                   type="text"
                   placeholder="Buscar producto..."
                   value={filtroNombre}
-                  onChange={e => {
+                  onChange={(e) => {
                     // Solo letras y espacios
-                    const val = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                    const val = e.target.value.replace(
+                      /[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g,
+                      ""
+                    );
                     setFiltroNombre(val);
                   }}
-                  style={{ padding: "0.5rem", borderRadius: 4, border: "1px solid #ddd" }}
+                  style={{
+                    padding: "0.5rem",
+                    borderRadius: 4,
+                    border: "1px solid #ddd",
+                  }}
                 />
                 <label>
                   <input
                     type="checkbox"
                     checked={soloStockBajo}
-                    onChange={e => setSoloStockBajo(e.target.checked)}
+                    onChange={(e) => setSoloStockBajo(e.target.checked)}
                     style={{ marginRight: "0.5rem" }}
                   />
                   Solo stock bajo
@@ -1047,7 +1231,7 @@ const productosFiltrados = productos.filter(p => {
                 {(filtroNombre || soloStockBajo) && (
                   <button
                     onClick={() => {
-                      setFiltroNombre('');
+                      setFiltroNombre("");
                       setSoloStockBajo(false);
                     }}
                     style={{
@@ -1056,7 +1240,7 @@ const productosFiltrados = productos.filter(p => {
                       border: "none",
                       borderRadius: "4px",
                       padding: "0.5rem 1rem",
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   >
                     Limpiar filtros
@@ -1087,26 +1271,58 @@ const productosFiltrados = productos.filter(p => {
                       border: "1px solid #f0f0f0",
                       minHeight: "150px",
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.boxShadow = "0 4px 16px rgba(253,187,40,0.18)";
-                      e.currentTarget.style.transform = "translateY(-2px) scale(1.02)";
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 16px rgba(253,187,40,0.18)";
+                      e.currentTarget.style.transform =
+                        "translateY(-2px) scale(1.02)";
                     }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)";
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow =
+                        "0 2px 8px rgba(0,0,0,0.07)";
                       e.currentTarget.style.transform = "none";
                     }}
                   >
-                    <div style={{ fontWeight: 700, fontSize: "1.15rem", marginBottom: "0.5rem", color: "#222" }}>
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        fontSize: "1.15rem",
+                        marginBottom: "0.5rem",
+                        color: "#222",
+                      }}
+                    >
                       {producto.nombre}
                     </div>
-                    <div style={{ fontSize: "1rem", color: "#28a745", fontWeight: 600, marginBottom: "0.3rem" }}>
+                    <div
+                      style={{
+                        fontSize: "1rem",
+                        color: "#28a745",
+                        fontWeight: 600,
+                        marginBottom: "0.3rem",
+                      }}
+                    >
                       Precio: ${Number(producto.precio).toFixed(2)}
                     </div>
-                    <div style={{ fontSize: "0.98rem", color: "#007bff", marginBottom: "0.3rem" }}>
-                      Stock disponible: <span style={{ color: "#222", fontWeight: 600 }}>{producto.stock_disponible ?? "N/A"}</span>
+                    <div
+                      style={{
+                        fontSize: "0.98rem",
+                        color: "#007bff",
+                        marginBottom: "0.3rem",
+                      }}
+                    >
+                      Stock disponible:{" "}
+                      <span style={{ color: "#222", fontWeight: 600 }}>
+                        {producto.stock_disponible ?? "N/A"}
+                      </span>
                     </div>
                     {producto.descripcion && (
-                      <div style={{ fontSize: "0.95rem", color: "#666", marginTop: "0.5rem" }}>
+                      <div
+                        style={{
+                          fontSize: "0.95rem",
+                          color: "#666",
+                          marginTop: "0.5rem",
+                        }}
+                      >
                         {producto.descripcion}
                       </div>
                     )}
@@ -1114,8 +1330,7 @@ const productosFiltrados = productos.filter(p => {
                 ))}
               </div>
             </div>
-          ))
-        }
+          ))}
       </main>
 
       {/* Modal de confirmación de cobro */}
@@ -1234,6 +1449,7 @@ const productosFiltrados = productos.filter(p => {
                         </th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {ordenParaCobrar.platos &&
                         ordenParaCobrar.platos.map((plato, index) => (
@@ -1243,7 +1459,9 @@ const productosFiltrados = productos.filter(p => {
                               borderBottom: "1px solid #dee2e6",
                             }}
                           >
-                            <td style={{ padding: "0.75rem" }}>{plato.nombre}</td>
+                            <td style={{ padding: "0.75rem" }}>
+                              {plato.nombre}
+                            </td>
                             <td
                               style={{
                                 padding: "0.75rem",
@@ -1266,14 +1484,54 @@ const productosFiltrados = productos.filter(p => {
                                 textAlign: "right",
                               }}
                             >
-                              ${(
-                                plato.cantidad * Number(plato.precio)
-                              ).toFixed(2)}
+                              $
+                              {(plato.cantidad * Number(plato.precio)).toFixed(
+                                2
+                              )}
                             </td>
                           </tr>
                         ))}
                     </tbody>
                   </table>
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <label
+                      style={{
+                        fontWeight: "bold",
+                        display: "block",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Método de Pago
+                    </label>
+                    <select
+                      value={metodoPago}
+                      onChange={(e) => {
+                        setMetodoPago(e.target.value);
+                        setErrorMetodoPago(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "0.6rem",
+                        fontSize: "1rem",
+                        borderRadius: "4px",
+                        border: errorMetodoPago
+                          ? "2px solid red"
+                          : "1px solid #ccc",
+                      }}
+                    >
+                      <option value="">-- Selecciona un método --</option>
+                      {metodosPago.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    {errorMetodoPago && (
+                      <span style={{ color: "red", fontSize: "0.9rem" }}>
+                        * Debes seleccionar un método de pago.
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1422,52 +1680,52 @@ const productosFiltrados = productos.filter(p => {
                 color: "#666",
               }}
             >
-              El comprobante se encuentra en el historial de transacciones.            </p>
+              El comprobante se encuentra en el historial de transacciones.{" "}
+            </p>
             <div
-  style={{
-    display: "flex",
-    justifyContent: "center",
-    marginTop: "1.5rem",
-    gap: "1rem"
-  }}
->
-  <button
-    onClick={handleCerrarModalImprimir}
-    style={{
-      background: "#6c757d",
-      color: "white",
-      border: "none",
-      borderRadius: "4px",
-      padding: "10px 24px",
-      cursor: "pointer",
-      fontSize: "1rem",
-      fontWeight: "500",
-    }}
-  >
-    Salir
-  </button>
-  <button
-    onClick={() => {
-      handleCerrarModalImprimir();
-      setMostrarTransacciones(true);
-      setMostrarMenu(false);
-      setMostrarOrdenes(false);
-    }}
-    style={{
-      background: "#17a2b8",
-      color: "white",
-      border: "none",
-      borderRadius: "4px",
-      padding: "10px 24px",
-      cursor: "pointer",
-      fontSize: "1rem",
-      fontWeight: "500",
-    }}
-  >
-    Ver Historial
-  </button>
-</div>
-
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginTop: "1.5rem",
+                gap: "1rem",
+              }}
+            >
+              <button
+                onClick={handleCerrarModalImprimir}
+                style={{
+                  background: "#6c757d",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  padding: "10px 24px",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                }}
+              >
+                Salir
+              </button>
+              <button
+                onClick={() => {
+                  handleCerrarModalImprimir();
+                  setMostrarTransacciones(true);
+                  setMostrarMenu(false);
+                  setMostrarOrdenes(false);
+                }}
+                style={{
+                  background: "#17a2b8",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  padding: "10px 24px",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                }}
+              >
+                Ver Historial
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1598,7 +1856,9 @@ const productosFiltrados = productos.filter(p => {
             <p style={{ marginBottom: "2rem", color: "#555" }}>
               ¿Estás seguro que deseas cerrar sesión?
             </p>
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+            <div
+              style={{ display: "flex", gap: "1rem", justifyContent: "center" }}
+            >
               <button
                 onClick={cancelLogout}
                 style={{
@@ -1637,5 +1897,3 @@ const productosFiltrados = productos.filter(p => {
 };
 
 export default CajaDashboard;
-
-

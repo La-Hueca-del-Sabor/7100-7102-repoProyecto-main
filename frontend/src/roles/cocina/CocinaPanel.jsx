@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+//iconografia
+import { FaSyncAlt, FaSignOutAlt } from 'react-icons/fa';
 
 const getTiempoBadge = (horaPedido) => {
   if (!horaPedido) return { badge: null, bg: "#fff" };
@@ -136,9 +138,13 @@ const CocinaPanel = () => {
             padding: "0.7rem 1rem",
             fontWeight: 600,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
           onClick={fetchOrdenes}
         >
+          <FaSyncAlt color="#222" size={18} />
           Actualizar Órdenes
         </button>
         <button
@@ -152,8 +158,12 @@ const CocinaPanel = () => {
             fontWeight: 600,
             cursor: "pointer",
             marginTop: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaSignOutAlt color="white" size={18} />
           Cerrar Sesión
         </button>
       </aside>

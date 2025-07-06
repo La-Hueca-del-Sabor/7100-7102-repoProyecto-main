@@ -1,6 +1,12 @@
-// ...existing imports...
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+//iconos
+import {
+  FaPlus,
+  FaClipboardList,
+  FaCheckSquare,
+  FaSignOutAlt,
+} from "react-icons/fa";
 
 const DashboardMesero = () => {
   const navigate = useNavigate();
@@ -478,7 +484,6 @@ const DashboardMesero = () => {
       fontWeight: "600",
       cursor: "pointer",
       transition: "all 0.2s ease",
-      textTransform: "uppercase",
       letterSpacing: "0.5px",
       display: "flex",
       alignItems: "center",
@@ -627,7 +632,7 @@ const DashboardMesero = () => {
           }}
           onClick={handleNuevaOrden}
         >
-          Nueva Orden
+          <FaPlus /> Nueva Orden
         </button>
         <button
           style={{
@@ -637,7 +642,7 @@ const DashboardMesero = () => {
           }}
           onClick={handleOrdenesActivas}
         >
-          Órdenes Activas
+          <FaClipboardList /> Órdenes Activas
         </button>
         <button
           style={{
@@ -647,7 +652,7 @@ const DashboardMesero = () => {
           }}
           onClick={handleOrdenesEntregadas}
         >
-          Órdenes Entregadas
+          <FaCheckSquare /> Órdenes Entregadas
         </button>
         <button
           style={{
@@ -657,7 +662,7 @@ const DashboardMesero = () => {
           }}
           onClick={handleLogout}
         >
-          Cerrar Sesión
+          <FaSignOutAlt /> Cerrar Sesión
         </button>
       </aside>
 
@@ -768,7 +773,6 @@ const DashboardMesero = () => {
                               </td>
                             </tr>
                           ))}
-
                         </React.Fragment>
                       )
                     )}

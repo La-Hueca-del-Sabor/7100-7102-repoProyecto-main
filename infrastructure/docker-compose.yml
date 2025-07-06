@@ -116,6 +116,19 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+  report-service:
+    build: ../services/report-service
+    ports:
+      - "3011:3011"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123
+      - POSTGRES_DB=la_hueca_del_sabor_db
+      - POSTGRES_HOST=host.docker.internal
+      - POSTGRES_PORT=5432
+    volumes:
+      - ../services/report-service:/usr/src/app
+      - /usr/src/app/node_modules
 
 networks:
   hueca-net:

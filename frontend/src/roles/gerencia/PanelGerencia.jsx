@@ -1,8 +1,18 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Importación dinámica del DashboardGerente
-const DashboardGerente = lazy(() => import('./DashboardGerente'));
+//iconos
+import {
+  FaBoxes,
+  FaChartLine,
+  FaFileAlt,
+  FaUsers,
+  FaSignOutAlt,
+} from "react-icons/fa";
+
+// Importación dinámica del DashboardGerente y ReportesGerente
+const DashboardGerente = lazy(() => import("./DashboardGerente"));
+const ReportesGerente = lazy(() => import("./ReportesGerente"));
 
 const PanelGerencia = () => {
   // Navegación
@@ -37,13 +47,13 @@ const PanelGerencia = () => {
   const [userError, setUserError] = useState("");
 
   // Estados principales del componente
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState("");
   const [platosRecientes, setPlatosRecientes] = useState([]);
   const [platosInventario, setPlatosInventario] = useState([]);
   const [showDashboard, setShowDashboard] = useState(false);
 
   // Estado para controlar la vista actual
-  const [currentView, setCurrentView] = useState('inventory'); // 'inventory', 'dashboard', 'users'
+  const [currentView, setCurrentView] = useState("inventory"); // 'inventory', 'dashboard', 'users', 'reports'
 
   // Efecto para cargar datos iniciales
   useEffect(() => {
@@ -82,7 +92,9 @@ const PanelGerencia = () => {
     setLoadingUsers(true);
     setUserError("");
     try {
-      const response = await fetch("http://localhost:3002/api/auth/usuarios-pendientes");
+      const response = await fetch(
+        "http://localhost:3002/api/auth/usuarios-pendientes"
+      );
       if (!response.ok) throw new Error("Error al obtener usuarios pendientes");
       const data = await response.json();
       setUsuariosPendientes(data);
@@ -96,7 +108,9 @@ const PanelGerencia = () => {
 
   const fetchUsuariosAceptados = async () => {
     try {
-      const response = await fetch("http://localhost:3002/api/auth/usuarios-aceptados");
+      const response = await fetch(
+        "http://localhost:3002/api/auth/usuarios-aceptados"
+      );
       if (!response.ok) throw new Error("Error al obtener usuarios aceptados");
       const data = await response.json();
       setUsuariosAceptados(data);
@@ -108,14 +122,19 @@ const PanelGerencia = () => {
 
   const handleAceptarUsuario = async (userId) => {
     try {
-      const response = await fetch(`http://localhost:3002/api/auth/aceptar-usuario/${userId}`, {
-        method: "POST",
-      });
-      
+      const response = await fetch(
+        `http://localhost:3002/api/auth/aceptar-usuario/${userId}`,
+        {
+          method: "POST",
+        }
+      );
+
       if (!response.ok) throw new Error("Error al aceptar usuario");
-      
+
       // Actualizar ambas listas de usuarios
-      setUsuariosPendientes(prev => prev.filter(user => user.id !== userId));
+      setUsuariosPendientes((prev) =>
+        prev.filter((user) => user.id !== userId)
+      );
       fetchUsuariosAceptados(); // Actualizar la lista de usuarios aceptados
       setMensaje("Usuario aceptado correctamente");
     } catch (error) {
@@ -277,58 +296,75 @@ const PanelGerencia = () => {
         />
         <h2 style={{ fontSize: "1.3rem", marginBottom: "2rem" }}>Acciones</h2>
         <button
-          onClick={() => setCurrentView('inventory')}
+          onClick={() => setCurrentView("inventory")}
           style={{
-            background: currentView === 'inventory' ? "#fdbb28" : "#444",
-            color: currentView === 'inventory' ? "#222" : "#fff",
+            background: currentView === "inventory" ? "#fdbb28" : "#444",
+            color: currentView === "inventory" ? "#222" : "#fff",
             border: "none",
             borderRadius: 6,
             padding: "0.7rem 1rem",
-            fontWeight: currentView === 'inventory' ? 600 : 500,
+            fontWeight: currentView === "inventory" ? 600 : 500,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaBoxes />
           Inventario
         </button>
         <button
-          onClick={() => setCurrentView('dashboard')}
+          onClick={() => setCurrentView("dashboard")}
           style={{
-            background: currentView === 'dashboard' ? "#fdbb28" : "#444",
-            color: currentView === 'dashboard' ? "#222" : "#fff",
+            background: currentView === "dashboard" ? "#fdbb28" : "#444",
+            color: currentView === "dashboard" ? "#222" : "#fff",
             border: "none",
             borderRadius: 6,
             padding: "0.7rem 1rem",
-            fontWeight: currentView === 'dashboard' ? 600 : 500,
+            fontWeight: currentView === "dashboard" ? 600 : 500,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaChartLine />
           Dashboard
         </button>
         <button
+          onClick={() => setCurrentView("reports")}
           style={{
-            background: "#444",
-            color: "#fff",
+            background: currentView === "reports" ? "#fdbb28" : "#444",
+            color: currentView === "reports" ? "#222" : "#fff",
             border: "none",
             borderRadius: 6,
             padding: "0.7rem 1rem",
-            fontWeight: 500,
+            fontWeight: currentView === "reports" ? 600 : 500,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaFileAlt />
           Ver Reportes
         </button>
         <button
-          onClick={() => setCurrentView('users')}
+          onClick={() => setCurrentView("users")}
           style={{
-            background: currentView === 'users' ? "#fdbb28" : "#444",
-            color: currentView === 'users' ? "#222" : "#fff",
+            background: currentView === "users" ? "#fdbb28" : "#444",
+            color: currentView === "users" ? "#222" : "#fff",
             border: "none",
             borderRadius: 6,
             padding: "0.7rem 1rem",
-            fontWeight: currentView === 'users' ? 600 : 500,
+            fontWeight: currentView === "users" ? 600 : 500,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaUsers />
           Gestionar Usuarios
         </button>
         <button
@@ -342,8 +378,12 @@ const PanelGerencia = () => {
             fontWeight: 600,
             cursor: "pointer",
             marginTop: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
           }}
         >
+          <FaSignOutAlt />
           Cerrar Sesión
         </button>
       </aside>
@@ -362,40 +402,48 @@ const PanelGerencia = () => {
           <h1
             style={{
               marginBottom: "2rem",
-              padding: "1rem", 
+              padding: "1rem",
               fontSize: "1.5rem",
               fontWeight: "bold",
-              color: "#808080"
+              color: "#808080",
             }}
           >
-            ¡Bienvenido {username}!
+            ¡Bienvenido a Gerencia!
           </h1>
         </div>
-        {currentView === 'dashboard' ? (
+        {currentView === "dashboard" ? (
           <Suspense fallback={<div>Cargando Dashboard...</div>}>
             <DashboardGerente />
           </Suspense>
-        ) : currentView === 'users' ? (
+        ) : currentView === "users" ? (
           <div>
-            <h2 style={{ fontSize: "1.8rem", marginBottom: "2rem" }}>Gestión de Usuarios</h2>
-            
+            <h2 style={{ fontSize: "1.8rem", marginBottom: "2rem" }}>
+              Gestión de Usuarios
+            </h2>
+
             {userError && (
-              <div style={{ color: "red", marginBottom: "1rem" }}>{userError}</div>
+              <div style={{ color: "red", marginBottom: "1rem" }}>
+                {userError}
+              </div>
             )}
-            
+
             {loadingUsers ? (
               <div>Cargando usuarios...</div>
             ) : (
               <div>
-                <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>Usuarios Aceptados</h3>
-                <table style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  background: "#fff",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  marginBottom: "2rem"
-                }}>
+                <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>
+                  Usuarios Aceptados
+                </h3>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    background: "#fff",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    marginBottom: "2rem",
+                  }}
+                >
                   <thead>
                     <tr style={{ background: "#fdbb28", color: "#222" }}>
                       <th style={{ padding: "0.7rem" }}>Usuario</th>
@@ -405,29 +453,58 @@ const PanelGerencia = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {usuariosAceptados.map(user => (
+                    {usuariosAceptados.map((user) => (
                       <tr key={user.id}>
-                        <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>{user.username}</td>
-                        <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>{user.correo}</td>
-                        <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>
-                          <span style={{
-                            background: "#4CAF50",
-                            color: "white",
-                            padding: "0.3rem 0.6rem",
-                            borderRadius: "4px",
-                            fontSize: "0.8rem"
-                          }}>
+                        <td
+                          style={{
+                            padding: "0.6rem",
+                            borderBottom: "1px solid #eee",
+                          }}
+                        >
+                          {user.username}
+                        </td>
+                        <td
+                          style={{
+                            padding: "0.6rem",
+                            borderBottom: "1px solid #eee",
+                          }}
+                        >
+                          {user.correo}
+                        </td>
+                        <td
+                          style={{
+                            padding: "0.6rem",
+                            borderBottom: "1px solid #eee",
+                          }}
+                        >
+                          <span
+                            style={{
+                              background: "#4CAF50",
+                              color: "white",
+                              padding: "0.3rem 0.6rem",
+                              borderRadius: "4px",
+                              fontSize: "0.8rem",
+                            }}
+                          >
                             {user.rol_nombre}
                           </span>
                         </td>
-                        <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>
+                        <td
+                          style={{
+                            padding: "0.6rem",
+                            borderBottom: "1px solid #eee",
+                          }}
+                        >
                           {new Date(user.creado_en).toLocaleString()}
                         </td>
                       </tr>
                     ))}
                     {usuariosAceptados.length === 0 && (
                       <tr>
-                        <td colSpan="4" style={{ textAlign: "center", padding: "1rem" }}>
+                        <td
+                          colSpan="4"
+                          style={{ textAlign: "center", padding: "1rem" }}
+                        >
                           No hay usuarios aceptados
                         </td>
                       </tr>
@@ -435,15 +512,19 @@ const PanelGerencia = () => {
                   </tbody>
                 </table>
 
-                <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>Usuarios con Correo Verificado</h3>
-                <table style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  background: "#fff",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  marginBottom: "2rem"
-                }}>
+                <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>
+                  Usuarios con Correo Verificado
+                </h3>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    background: "#fff",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    marginBottom: "2rem",
+                  }}
+                >
                   <thead>
                     <tr style={{ background: "#fdbb28", color: "#222" }}>
                       <th style={{ padding: "0.7rem" }}>Nombre</th>
@@ -455,16 +536,47 @@ const PanelGerencia = () => {
                   </thead>
                   <tbody>
                     {usuariosPendientes
-                      .filter(user => user.email_verificado)
-                      .map(user => (
+                      .filter((user) => user.email_verificado)
+                      .map((user) => (
                         <tr key={user.id}>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>{user.nombres}</td>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>{user.correo}</td>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>{user.role_id}</td>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
+                            {user.nombres}
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
+                            {user.correo}
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
+                            {user.role_id}
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
                             {new Date(user.fecha_solicitud).toLocaleString()}
                           </td>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
                             <button
                               onClick={() => handleAceptarUsuario(user.id)}
                               style={{
@@ -473,17 +585,21 @@ const PanelGerencia = () => {
                                 border: "none",
                                 borderRadius: "4px",
                                 padding: "0.5rem 1rem",
-                                cursor: "pointer"
+                                cursor: "pointer",
                               }}
                             >
                               Aceptar
                             </button>
                           </td>
                         </tr>
-                    ))}
-                    {usuariosPendientes.filter(user => user.email_verificado).length === 0 && (
+                      ))}
+                    {usuariosPendientes.filter((user) => user.email_verificado)
+                      .length === 0 && (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: "center", padding: "1rem" }}>
+                        <td
+                          colSpan="5"
+                          style={{ textAlign: "center", padding: "1rem" }}
+                        >
                           No hay usuarios verificados pendientes
                         </td>
                       </tr>
@@ -491,14 +607,18 @@ const PanelGerencia = () => {
                   </tbody>
                 </table>
 
-                <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>Usuarios Pendientes de Verificación</h3>
-                <table style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  background: "#fff",
-                  borderRadius: 8,
-                  overflow: "hidden"
-                }}>
+                <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>
+                  Usuarios Pendientes de Verificación
+                </h3>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    background: "#fff",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                  }}
+                >
                   <thead>
                     <tr style={{ background: "#fdbb28", color: "#222" }}>
                       <th style={{ padding: "0.7rem" }}>Nombre</th>
@@ -510,31 +630,68 @@ const PanelGerencia = () => {
                   </thead>
                   <tbody>
                     {usuariosPendientes
-                      .filter(user => !user.email_verificado)
-                      .map(user => (
+                      .filter((user) => !user.email_verificado)
+                      .map((user) => (
                         <tr key={user.id}>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>{user.nombres}</td>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>{user.correo}</td>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>{user.role_id}</td>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
+                            {user.nombres}
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
+                            {user.correo}
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
+                            {user.role_id}
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
                             {new Date(user.fecha_solicitud).toLocaleString()}
                           </td>
-                          <td style={{ padding: "0.6rem", borderBottom: "1px solid #eee" }}>
-                            <span style={{
-                              background: "#ff9800",
-                              color: "white",
-                              padding: "0.3rem 0.6rem",
-                              borderRadius: "4px",
-                              fontSize: "0.8rem"
-                            }}>
+                          <td
+                            style={{
+                              padding: "0.6rem",
+                              borderBottom: "1px solid #eee",
+                            }}
+                          >
+                            <span
+                              style={{
+                                background: "#ff9800",
+                                color: "white",
+                                padding: "0.3rem 0.6rem",
+                                borderRadius: "4px",
+                                fontSize: "0.8rem",
+                              }}
+                            >
                               Pendiente de verificación
                             </span>
                           </td>
                         </tr>
-                    ))}
-                    {usuariosPendientes.filter(user => !user.email_verificado).length === 0 && (
+                      ))}
+                    {usuariosPendientes.filter((user) => !user.email_verificado)
+                      .length === 0 && (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: "center", padding: "1rem" }}>
+                        <td
+                          colSpan="5"
+                          style={{ textAlign: "center", padding: "1rem" }}
+                        >
                           No hay usuarios pendientes de verificación
                         </td>
                       </tr>
@@ -544,6 +701,10 @@ const PanelGerencia = () => {
               </div>
             )}
           </div>
+        ) : currentView === "reports" ? (
+          <Suspense fallback={<div>Cargando Reportes...</div>}>
+            <ReportesGerente />
+          </Suspense>
         ) : (
           <>
             <section style={{ marginBottom: "2.5rem" }}>
@@ -610,7 +771,9 @@ const PanelGerencia = () => {
                 </button>
               </form>
               {mensaje && (
-                <div style={{ color: "green", marginBottom: 10 }}>{mensaje}</div>
+                <div style={{ color: "green", marginBottom: 10 }}>
+                  {mensaje}
+                </div>
               )}
               {error && (
                 <div style={{ color: "red", marginBottom: 10 }}>{error}</div>
