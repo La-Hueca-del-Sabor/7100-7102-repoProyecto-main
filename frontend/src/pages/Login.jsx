@@ -23,10 +23,23 @@ const Login = () => {
   });
   const [registerErrors, setRegisterErrors] = useState({});
   const [registerSuccess, setRegisterSuccess] = useState('');
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false);
 
-  const validateEmail = (email) => {
-    return email.includes('@');
-  };
+  // Expresión regular para validar nombres (solo letras y espacios)
+  const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+
+  // Expresión regular para validar correo electrónico
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Expresión regular para validar contraseña (mínimo 6, al menos una letra y un número)
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6,}$/;
+
+  const validateEmail = (email) => emailRegex.test(email);
+
+  const validateName = (name) => nameRegex.test(name.trim());
+
+  const validatePassword = (password) => passwordRegex.test(password);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,14 +50,14 @@ const Login = () => {
     let valid = true;
 
     if (!validateEmail(email)) {
-      setEmailError('El correo debe contener un @ válido.');
+      setEmailError('Ingrese un correo electrónico válido.');
       valid = false;
     } else {
       setEmailError('');
     }
 
-    if (password.length < 6) {
-      setPasswordError('La contraseña debe tener al menos 6 caracteres.');
+    if (!validatePassword(password)) {
+      setPasswordError('La contraseña debe tener al menos 6 caracteres, una letra y un número.');
       valid = false;
     } else {
       setPasswordError('');
@@ -64,6 +77,10 @@ const Login = () => {
         } else {
           localStorage.setItem('token', data.token);
           localStorage.setItem('role', data.roleName);
+          localStorage.setItem('authData', JSON.stringify({
+    nombre: data.perfil?.nombres || "Usuario",
+    rol: data.roleName
+  }));
 
           switch (data.roleName) {
             case 'mesero':
@@ -91,20 +108,26 @@ const Login = () => {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     const errors = {};
-    
+
     // Validaciones
     if (!registerData.nombres.trim()) {
       errors.nombres = 'El nombre es requerido';
+    } else if (!validateName(registerData.nombres)) {
+      errors.nombres = 'El nombre solo debe contener letras y espacios';
     }
+
     if (!registerData.correo.trim() || !validateEmail(registerData.correo)) {
       errors.correo = 'Ingrese un correo válido';
     }
-    if (registerData.password.length < 6) {
-      errors.password = 'La contraseña debe tener al menos 6 caracteres';
+
+    if (!validatePassword(registerData.password)) {
+      errors.password = 'La contraseña debe tener al menos 6 caracteres, una letra y un número';
     }
+
     if (registerData.password !== registerData.confirmPassword) {
       errors.confirmPassword = 'Las contraseñas no coinciden';
     }
+
     if (!registerData.role_id) {
       errors.role_id = 'Seleccione un rol';
     }
@@ -153,6 +176,20 @@ const Login = () => {
         submit: 'No se pudo conectar con el servidor'
       });
     }
+  };
+
+  // Deshabilitar botón si hay errores en registro
+  const isRegisterDisabled = Object.keys(registerErrors).length > 0 ||
+    !registerData.nombres ||
+    !registerData.correo ||
+    !registerData.password ||
+    !registerData.confirmPassword ||
+    !registerData.role_id;
+
+  // Solo permite letras y espacios en nombres (en tiempo real)
+  const handleNameChange = (e) => {
+    const value = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    setRegisterData({ ...registerData, nombres: value });
   };
 
   return (
@@ -264,8 +301,10 @@ const Login = () => {
                   type="text"
                   className="form-control"
                   value={registerData.nombres}
-                  onChange={(e) => setRegisterData({...registerData, nombres: e.target.value})}
+                  onChange={handleNameChange}
                   placeholder="Ingrese sus nombres"
+                  maxLength={50}
+                  autoComplete="off"
                 />
                 {registerErrors.nombres && (
                   <small className="text-danger">{registerErrors.nombres}</small>
@@ -280,6 +319,7 @@ const Login = () => {
                   value={registerData.correo}
                   onChange={(e) => setRegisterData({...registerData, correo: e.target.value})}
                   placeholder="correo@ejemplo.com"
+                  autoComplete="off"
                 />
                 {registerErrors.correo && (
                   <small className="text-danger">{registerErrors.correo}</small>
@@ -288,13 +328,25 @@ const Login = () => {
 
               <div className="form-group">
                 <label>Contraseña</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  value={registerData.password}
-                  onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
-                  placeholder="Ingrese su contraseña"
-                />
+                <div className="input-group">
+                  <input
+                    type={showRegisterPassword ? 'text' : 'password'}
+                    className="form-control"
+                    value={registerData.password}
+                    onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                    placeholder="Ingrese su contraseña"
+                    autoComplete="new-password"
+                  />
+                  <div className="input-group-append">
+                    <button
+                      type="button"
+                      className="input-group-text"
+                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                    >
+                      {showRegisterPassword ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </div>
+                </div>
                 {registerErrors.password && (
                   <small className="text-danger">{registerErrors.password}</small>
                 )}
@@ -302,13 +354,25 @@ const Login = () => {
 
               <div className="form-group">
                 <label>Confirmar Contraseña</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  value={registerData.confirmPassword}
-                  onChange={(e) => setRegisterData({...registerData, confirmPassword: e.target.value})}
-                  placeholder="Confirme su contraseña"
-                />
+                <div className="input-group">
+                  <input
+                    type={showRegisterConfirmPassword ? 'text' : 'password'}
+                    className="form-control"
+                    value={registerData.confirmPassword}
+                    onChange={(e) => setRegisterData({...registerData, confirmPassword: e.target.value})}
+                    placeholder="Confirme su contraseña"
+                    autoComplete="new-password"
+                  />
+                  <div className="input-group-append">
+                    <button
+                      type="button"
+                      className="input-group-text"
+                      onClick={() => setShowRegisterConfirmPassword(!showRegisterConfirmPassword)}
+                    >
+                      {showRegisterConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </div>
+                </div>
                 {registerErrors.confirmPassword && (
                   <small className="text-danger">{registerErrors.confirmPassword}</small>
                 )}
@@ -343,7 +407,7 @@ const Login = () => {
                 </div>
               )}
 
-              <button type="submit" className="login-btn">
+              <button type="submit" className="login-btn" disabled={isRegisterDisabled}>
                 Registrarse
               </button>
             </form>

@@ -34,7 +34,7 @@ services:
     environment:
       POSTGRES_DB: la_hueca_del_sabor_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Shadin2001
+      POSTGRES_PASSWORD: 123
       POSTGRES_HOST: host.docker.internal
       POSTGRES_PORT: 5432
       JWT_SECRET: mysecretkey
@@ -57,7 +57,7 @@ services:
     environment:
       POSTGRES_DB: la_hueca_del_sabor_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Shadin2001
+      POSTGRES_PASSWORD: 123
       POSTGRES_HOST: host.docker.internal
       POSTGRES_PORT: 5432
     depends_on:
@@ -79,7 +79,7 @@ services:
     environment:
       POSTGRES_DB: la_hueca_del_sabor_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Shadin2001
+      POSTGRES_PASSWORD: 123
       POSTGRES_HOST: host.docker.internal
       POSTGRES_PORT: 5432
       JWT_SECRET: mysecretkey

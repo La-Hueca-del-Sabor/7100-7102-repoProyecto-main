@@ -1,3 +1,4 @@
+// ...existing imports...
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -24,6 +25,15 @@ const DashboardMesero = () => {
   const [notasPedido, setNotasPedido] = useState("");
   const [showConfirmEntregadoModal, setShowConfirmEntregadoModal] = useState(false);
   const [pedidoParaEntregar, setPedidoParaEntregar] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [esConsumidorFinal, setEsConsumidorFinal] = useState(false);
+  const LIMITE_NOTAS = 200;
+const [usuario, setUsuario] = useState(null);
+const [pagina, setPagina] = useState(1);
+const [porPagina] = useState(10);
+const [filtroEstado] = useState("entregado");
+const [totalOrdenesHoy, setTotalOrdenesHoy] = useState(0);
+const [totalMontoHoy, setTotalMontoHoy] = useState(0);
 
   // Cargar platos disponibles al montar el componente
   useEffect(() => {
@@ -41,6 +51,59 @@ const DashboardMesero = () => {
     };
     fetchPlatos();
   }, []);
+  // validación en tiempo real
+    const handleChangeCampo = (campo, valor) => {
+    let nuevosErrores = { ...errors };
+
+    switch (campo) {
+      case "mesa":
+        if (!/^\d+$/.test(valor) || Number(valor) < 1 || Number(valor) > 50) {
+          nuevosErrores.mesa = "Solo valores entre 1 y 50";
+        } else {
+          delete nuevosErrores.mesa;
+        }
+        setMesa(valor);
+        break;
+
+      case "nombre":
+       if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]*$/.test(valor)) {
+          setClientName(valor);
+          if (valor.trim().length < 3) {
+            nuevosErrores.nombre = "Solo letras, mínimo 3 caracteres";
+          } else {
+            delete nuevosErrores.nombre;
+          }
+        }
+        break;
+
+      case "cedula":
+       if (/^\d{0,10}$/.test(valor)) {
+        setClientCedula(valor);
+        if (valor.length !== 10) {
+          nuevosErrores.cedula = "Debe tener exactamente 10 dígitos";
+        } else {
+          delete nuevosErrores.cedula;
+        }
+      }
+      break;
+
+      default:
+        break;
+    }
+
+    setErrors(nuevosErrores);
+  };
+  //calcular el tiempo transcurrido desde el pedido
+  const calcularTiempoTranscurrido = (horaPedido) => {
+  const ahora = new Date();
+  const inicio = new Date(horaPedido);
+  const diferenciaMin = Math.floor((ahora - inicio) / 60000);
+
+  const horas = Math.floor(diferenciaMin / 60);
+  const minutos = diferenciaMin % 60;
+
+  return horas > 0 ? `${horas}h ${minutos}min` : `${minutos} min`;
+};
 
   // Cargar pedidos activos y entregados
   const fetchPedidos = async () => {
@@ -80,30 +143,89 @@ const DashboardMesero = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Efecto para filtrar pedidos entregados
+  // Efecto para filtrar pedidos entregados (con filtro de hoy por defecto y paginación)
   useEffect(() => {
     const filtrarPedidos = () => {
       let pedidosFiltrados = [...pedidosEntregados];
 
+      // Filtro por cliente (solo letras y espacios)
       if (busquedaCliente) {
         pedidosFiltrados = pedidosFiltrados.filter(pedido =>
           pedido.cliente_nombre.toLowerCase().includes(busquedaCliente.toLowerCase())
         );
       }
 
-      if (busquedaFecha) {
-        const fechaBusqueda = new Date(busquedaFecha);
+      // Filtro por fecha (por defecto hoy, máximo 1 mes atrás, nunca días futuros)
+      let fechaFiltro = busquedaFecha;
+      const hoy = new Date();
+      const haceUnMes = new Date();
+      haceUnMes.setMonth(hoy.getMonth() - 1);
+
+      // Si no hay fecha, usar hoy
+      if (!busquedaFecha) {
+        fechaFiltro = hoy.toISOString().split("T")[0];
+      }
+
+      if (fechaFiltro) {
+        const fechaBusqueda = new Date(fechaFiltro);
         pedidosFiltrados = pedidosFiltrados.filter(pedido => {
           const fechaPedido = new Date(pedido.hora_pedido);
           return fechaPedido.toLocaleDateString() === fechaBusqueda.toLocaleDateString();
         });
       }
 
+      // Ordenar por fecha descendente
+      pedidosFiltrados.sort((a, b) => new Date(b.hora_pedido) - new Date(a.hora_pedido));
+
+      // Guardar totales de hoy
+      if (!busquedaFecha) {
+        setTotalOrdenesHoy(pedidosFiltrados.length);
+        setTotalMontoHoy(
+          pedidosFiltrados.reduce((acc, pedido) => acc + (Number(pedido.total) || 0), 0)
+        );
+      }
+
       setPedidosEntregadosFiltrados(pedidosFiltrados);
+      setPagina(1); // Resetear a la primera página al filtrar
     };
 
     filtrarPedidos();
+    // eslint-disable-next-line
   }, [pedidosEntregados, busquedaCliente, busquedaFecha]);
+
+  // Paginación
+  const totalPaginas = Math.ceil(pedidosEntregadosFiltrados.length / porPagina);
+  const pedidosPaginados = pedidosEntregadosFiltrados.slice(
+    (pagina - 1) * porPagina,
+    pagina * porPagina
+  );
+
+  // Ordenar por columna
+  const [ordenColumna, setOrdenColumna] = useState({ campo: "hora_pedido", asc: false });
+  const ordenarPorColumna = (campo) => {
+    const asc = ordenColumna.campo === campo ? !ordenColumna.asc : true;
+    setOrdenColumna({ campo, asc });
+    const sorted = [...pedidosEntregadosFiltrados].sort((a, b) => {
+      if (campo === "total" || campo === "mesa") {
+        return asc
+          ? Number(a[campo]) - Number(b[campo])
+          : Number(b[campo]) - Number(a[campo]);
+      }
+      if (campo === "cliente_nombre") {
+        return asc
+          ? a[campo].localeCompare(b[campo])
+          : b[campo].localeCompare(a[campo]);
+      }
+      if (campo === "hora_pedido") {
+        return asc
+          ? new Date(a[campo]) - new Date(b[campo])
+          : new Date(b[campo]) - new Date(a[campo]);
+      }
+      return 0;
+    });
+    setPedidosEntregadosFiltrados(sorted);
+    setPagina(1);
+  };
 
   // Manejo de logout
   const handleLogout = () => setShowLogoutModal(true);
@@ -130,54 +252,89 @@ const DashboardMesero = () => {
     const plato = platosSeleccionados.find((p) => p.id === platoId);
     return plato ? plato.cantidad : 0;
   };
+  // helper para validación de campos
 
+  const validarCampos = () => {
+  const nuevosErrores = {};
+  const nombre = clientName.trim();
+  const cedula = clientCedula.trim();
+  const mesaNumero = Number(mesa);
+
+  if (!esConsumidorFinal) {
+    if (!mesaNumero || mesaNumero < 1) {
+      nuevosErrores.mesa = "La mesa debe ser un número positivo.";
+    }
+
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]{3,}$/.test(nombre)) {
+      nuevosErrores.nombre = "Solo letras, mínimo 3 caracteres.";
+    }
+
+    if (!/^\d{10}$/.test(cedula)) {
+      nuevosErrores.cedula = "Debe tener exactamente 10 dígitos.";
+    }
+  }
+
+  if (platosSeleccionados.length === 0) {
+    nuevosErrores.platos = "Debe seleccionar al menos un plato.";
+  }
+
+  setErrors(nuevosErrores);
+  return Object.keys(nuevosErrores).length === 0;
+};
   // Manejar envío del pedido
-  const handleSubmitPedido = async () => {
-    if (!mesa || !clientName || !setClientCedula) {
-      setError("Por favor, complete todos los datos del cliente y la mesa");
-      return;
-    }
-    if (!platosSeleccionados.length) {
-      setError("Por favor selecciona al menos un plato.");
-      return;
-    }
-  
-    // 🚀 ENVIAR los datos que el backend espera
-    const payload = {
-      mesa,
-      cliente_nombre: clientName,
-      cedula: clientCedula,
-      platos: platosSeleccionados,
-      notas: notasPedido
-    };
-  
-    try {
-      const response = await fetch("http://localhost:3004/api/pedidos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Error al crear pedido");
-      }
-      // Pedido creado con éxito
-      setShowFormPedido(false);
-      setShowOrdenesActivas(true);
-      setShowOrdenesEntregadas(false);
-      setMesa("");
-      setClientName("");
-      setClientCedula("");
-      setPlatosSeleccionados([]);
-      setExtrasSeleccionados([]);
-      setNotasPedido("");
-      setError("");
-      fetchPedidos();
-    } catch (error) {
-      console.error("Error submitting pedido:", error);
-      setError(`Error al enviar el pedido: ${error.message}`);
-    }
+const handleSubmitPedido = async () => {
+  let nombre = clientName.trim();
+  let cedula = clientCedula.trim();
+  let mesaNumero = Number(mesa);
+
+  // Valores predeterminados si es consumidor final
+  if (esConsumidorFinal) {
+    nombre = "Consumidor Final";
+    cedula = "9999999999";
+    mesaNumero = 999;
+  }
+
+  const camposValidos = validarCampos();
+  if (!camposValidos) return;
+
+  const payload = {
+    mesa: mesaNumero,
+    cliente_nombre: nombre,
+    cedula: cedula,
+    platos: platosSeleccionados,
+    notas: notasPedido,
   };
+
+  try {
+    const response = await fetch("http://localhost:3004/api/pedidos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.error || "Error al crear pedido");
+
+    // Reset
+    setShowFormPedido(false);
+    setShowOrdenesActivas(true);
+    setShowOrdenesEntregadas(false);
+    setMesa("");
+    setClientName("");
+    setClientCedula("");
+    setPlatosSeleccionados([]);
+    setExtrasSeleccionados([]);
+    setNotasPedido("");
+    setErrors({});
+    setEsConsumidorFinal(false);
+    fetchPedidos();
+  } catch (error) {
+    console.error("Error submitting pedido:", error);
+    setError(`Error al enviar el pedido: ${error.message}`);
+  }
+};
+
 
   const handleNuevaOrden = () => {
     setShowFormPedido(true);
@@ -374,7 +531,21 @@ const DashboardMesero = () => {
       justifyContent: "center",
     },
   };
+// agrupar los pedidos por mesa
+const agruparPedidosPorMesa = (pedidos) => {
+  const grupos = {};
 
+  pedidos.forEach((pedido) => {
+    const mesaKey = pedido.mesa === 999 ? "CF" : pedido.mesa;
+    if (!grupos[mesaKey]) {
+      grupos[mesaKey] = [];
+    }
+    grupos[mesaKey].push(pedido);
+  });
+
+  return grupos;
+
+};
   return (
     <div style={styles.contenedorPrincipal}>
       <aside style={styles.sidebar}>
@@ -428,8 +599,9 @@ const DashboardMesero = () => {
 
       <main style={{ flex: 1, padding: "2.5rem 3rem" }}>
         <h1 style={{ fontWeight: 600, fontSize: "2.2rem", marginBottom: "2rem", color: "#222" }}>
-          Panel del Mesero
+          Bienvenido{usuario?.nombre ? `, ${usuario.nombre}` : ""} 👋
         </h1>
+
 
         {showOrdenesActivas && (
           <section>
@@ -437,6 +609,7 @@ const DashboardMesero = () => {
             <table style={styles.tabla}>
               <thead>
                 <tr style={{ background: "#fdbb28", color: "#222" }}>
+                  <th style={{ padding: "0.7rem" }}># Orden</th>
                   <th style={{ padding: "0.7rem" }}>Mesa</th>
                   <th style={{ padding: "0.7rem" }}>Estado</th>
                   <th style={{ padding: "0.7rem" }}>Tiempo</th>
@@ -444,91 +617,120 @@ const DashboardMesero = () => {
                 </tr>
               </thead>
               <tbody>
+                
                 {pedidos.length === 0 ? (
                   <tr>
-                    <td colSpan="4" style={{ textAlign: "center" }}>No hay órdenes activas</td>
+                    <td colSpan="4" style={{ textAlign: "center" }}>
+                      No hay órdenes activas
+                    </td>
                   </tr>
                 ) : (
-                  pedidos.map((pedido) => (
-                    <tr key={pedido.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "0.7rem", textAlign: "center" }}>{pedido.mesa || "N/A"}</td>
-                      <td style={{ padding: "0.7rem", textAlign: "center" }}>
-                        <span style={pedido.estado === "ENTREGADO" ? styles.estadoEntregado : styles.estadoPendiente}>
-                          {pedido.estado || "PENDIENTE"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.7rem", textAlign: "center" }}>
-                        {pedido.hora_pedido
-                          ? `${Math.floor((Date.now() - new Date(pedido.hora_pedido).getTime()) / 60000)} min`
-                          : "N/A"}
-                      </td>
-                      <td style={{ padding: "0.7rem" }}>
-                        <div style={styles.botonesAccion}>
-                          <button
-                            onClick={() => handleMostrarDetalles(pedido)}
-                            style={{ 
-                              background: "#444", 
-                              color: "#ffffff", 
-                              border: "none", 
-                              borderRadius: "4px", 
-                              padding: "0.5rem 1rem", 
-                              cursor: "pointer",
-                              fontWeight: "500",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.5px",
-                              fontSize: "0.9rem"
-                            }}
-                          >
-                            Detalles
-                          </button>
-                          {pedido.estado !== "ENTREGADO" && (
-                            <button
-                              onClick={() => handleConfirmarEntrega(pedido)}
-                              style={{ 
-                                background: "#28a745", 
-                                color: "#ffffff", 
-                                border: "none", 
-                                borderRadius: "4px", 
-                                padding: "0.5rem 1rem", 
-                                cursor: "pointer",
-                                fontWeight: "500",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                                fontSize: "0.9rem"
-                              }}
-                            >
-                              Entregar
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  <>
+                    {Object.entries(agruparPedidosPorMesa(pedidos)).map(([mesa, pedidosMesa]) => (
+                      <React.Fragment key={mesa}>
+                        <tr>
+                          <td colSpan="4" style={{
+                            background: "#eee",
+                            fontWeight: "bold",
+                            padding: "0.6rem",
+                            textAlign: "left",
+                            color: "#333",
+                            fontSize: "1rem",
+                            borderTop: "2px solid #ccc"
+                          }}>
+                            Mesa {mesa}
+                          </td>
+                        </tr>
+
+                        {pedidosMesa.map((pedido) => (
+                          <tr key={pedido.id} style={{ borderBottom: "1px solid #eee" }}>
+
+                            <td style={{ padding: "0.7rem", textAlign: "center" }}>
+                              {pedido.mesa === 999 ? "CF" : pedido.mesa}
+                            </td>
+                            <td style={{ padding: "0.7rem", textAlign: "center" }}>
+                              <span style={styles.estadoPendiente}>{pedido.estado}</span>
+                            </td>
+                            <td style={{ padding: "0.7rem", textAlign: "center" }}>
+                              {pedido.hora_pedido ? calcularTiempoTranscurrido(pedido.hora_pedido) : "N/A"}
+                            </td>
+                            <td style={{ padding: "0.7rem" }}>
+                              <div style={styles.botonesAccion}>
+                                <button
+                                  onClick={() => handleMostrarDetalles(pedido)}
+                                  style={{
+                                    background: "#444",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    padding: "0.5rem 1rem",
+                                    cursor: "pointer",
+                                    fontSize: "0.9rem"
+                                  }}
+                                >
+                                  Detalles
+                                </button>
+
+                                {pedido.estado === "pendiente" && (
+                                  <button
+                                    onClick={() => handleConfirmarEntrega(pedido)}
+                                    style={{
+                                      background: "#28a745",
+                                      color: "#fff",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      padding: "0.5rem 1rem",
+                                      cursor: "pointer",
+                                      fontSize: "0.9rem"
+                                    }}
+                                  >
+                                    Entregar
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </>
                 )}
               </tbody>
-            </table>
-          </section>
+              </table>
+              </section>
         )}
 
         {showOrdenesEntregadas && (
           <section>
-            <div style={{ 
-              display: "flex", 
-              justifyContent: "space-between", 
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
               marginBottom: "2rem"
             }}>
-              <h2 style={{ fontSize: "1.3rem", margin: 0 }}>Órdenes Entregadas</h2>
-              <div style={{ 
-                display: "flex", 
+              <div>
+                <h2 style={{ fontSize: "1.3rem", margin: 0 }}>Órdenes Entregadas</h2>
+                <div style={{ fontSize: "1rem", color: "#222", marginTop: "0.5rem" }}>
+                  <strong>
+                    {busquedaFecha
+                      ? `Mostrando ${pedidosEntregadosFiltrados.length} órdenes`
+                      : `Hoy: ${totalOrdenesHoy} órdenes | Total: $${totalMontoHoy.toFixed(2)}`}
+                  </strong>
+                </div>
+              </div>
+              <div style={{
+                display: "flex",
                 gap: "1rem",
-                alignItems: "center" 
+                alignItems: "center"
               }}>
                 <input
                   type="text"
                   placeholder="Buscar por cliente..."
                   value={busquedaCliente}
-                  onChange={(e) => setBusquedaCliente(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                    setBusquedaCliente(value);
+                  }}
                   style={{
                     padding: "0.5rem",
                     border: "1px solid #ddd",
@@ -539,7 +741,20 @@ const DashboardMesero = () => {
                 <input
                   type="date"
                   value={busquedaFecha}
-                  onChange={(e) => setBusquedaFecha(e.target.value)}
+                  max={new Date().toISOString().split("T")[0]}
+                  min={(() => {
+                    const hoy = new Date();
+                    const haceUnMes = new Date();
+                    haceUnMes.setMonth(hoy.getMonth() - 1);
+                    return haceUnMes.toISOString().split("T")[0];
+                  })()}
+                  onChange={(e) => {
+                    // No permitir fechas futuras
+                    const value = e.target.value;
+                    const hoy = new Date().toISOString().split("T")[0];
+                    if (value > hoy) return;
+                    setBusquedaFecha(value);
+                  }}
                   style={{
                     padding: "0.5rem",
                     border: "1px solid #ddd",
@@ -570,24 +785,32 @@ const DashboardMesero = () => {
             <table style={styles.tabla}>
               <thead>
                 <tr style={{ background: "#fdbb28", color: "#222" }}>
-                  <th style={{ padding: "0.7rem" }}>Mesa</th>
-                  <th style={{ padding: "0.7rem" }}>Cliente</th>
-                  <th style={{ padding: "0.7rem" }}>Hora Entrega</th>
-                  <th style={{ padding: "0.7rem" }}>Total</th>
+                  <th style={{ padding: "0.7rem", cursor: "pointer" }} onClick={() => ordenarPorColumna("mesa")}>
+                    Mesa {ordenColumna.campo === "mesa" ? (ordenColumna.asc ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "0.7rem", cursor: "pointer" }} onClick={() => ordenarPorColumna("cliente_nombre")}>
+                    Cliente {ordenColumna.campo === "cliente_nombre" ? (ordenColumna.asc ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "0.7rem", cursor: "pointer" }} onClick={() => ordenarPorColumna("hora_pedido")}>
+                    Hora Entrega {ordenColumna.campo === "hora_pedido" ? (ordenColumna.asc ? "▲" : "▼") : ""}
+                  </th>
+                  <th style={{ padding: "0.7rem", cursor: "pointer" }} onClick={() => ordenarPorColumna("total")}>
+                    Total {ordenColumna.campo === "total" ? (ordenColumna.asc ? "▲" : "▼") : ""}
+                  </th>
                   <th style={{ padding: "0.7rem" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {pedidosEntregadosFiltrados.length === 0 ? (
+                {pedidosPaginados.length === 0 ? (
                   <tr>
                     <td colSpan="5" style={{ textAlign: "center" }}>
-                      {busquedaCliente || busquedaFecha 
-                        ? "No se encontraron órdenes con los filtros aplicados" 
+                      {busquedaCliente || busquedaFecha
+                        ? "No se encontraron órdenes con los filtros aplicados"
                         : "No hay órdenes entregadas"}
                     </td>
                   </tr>
                 ) : (
-                  pedidosEntregadosFiltrados.map((pedido) => (
+                  pedidosPaginados.map((pedido) => (
                     <tr key={pedido.id} style={{ borderBottom: "1px solid #eee" }}>
                       <td style={{ padding: "0.7rem", textAlign: "center" }}>{pedido.mesa}</td>
                       <td style={{ padding: "0.7rem", textAlign: "center" }}>{pedido.cliente_nombre}</td>
@@ -601,12 +824,12 @@ const DashboardMesero = () => {
                         <div style={styles.botonesAccion}>
                           <button
                             onClick={() => handleMostrarDetalles(pedido)}
-                            style={{ 
-                              background: "#444", 
-                              color: "#ffffff", 
-                              border: "none", 
-                              borderRadius: "4px", 
-                              padding: "0.5rem 1rem", 
+                            style={{
+                              background: "#444",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: "4px",
+                              padding: "0.5rem 1rem",
                               cursor: "pointer",
                               fontWeight: "500",
                               textTransform: "uppercase",
@@ -623,6 +846,42 @@ const DashboardMesero = () => {
                 )}
               </tbody>
             </table>
+            {/* Paginación */}
+            {totalPaginas > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", margin: "1.5rem 0" }}>
+                <button
+                  onClick={() => setPagina(p => Math.max(1, p - 1))}
+                  disabled={pagina === 1}
+                  style={{
+                    marginRight: "0.5rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "4px",
+                    border: "1px solid #ddd",
+                    background: pagina === 1 ? "#eee" : "#fff",
+                    cursor: pagina === 1 ? "not-allowed" : "pointer"
+                  }}
+                >
+                  Anterior
+                </button>
+                <span style={{ alignSelf: "center", margin: "0 1rem" }}>
+                  Página {pagina} de {totalPaginas}
+                </span>
+                <button
+                  onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+                  disabled={pagina === totalPaginas}
+                  style={{
+                    marginLeft: "0.5rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "4px",
+                    border: "1px solid #ddd",
+                    background: pagina === totalPaginas ? "#eee" : "#fff",
+                    cursor: pagina === totalPaginas ? "not-allowed" : "pointer"
+                  }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </section>
         )}
 
@@ -648,6 +907,29 @@ const DashboardMesero = () => {
               gap: "1.5rem",
               marginBottom: "2rem"
             }}>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{ fontSize: "0.9rem", fontWeight: "500" }}>
+                  <input
+                    type="checkbox"
+                    checked={esConsumidorFinal}
+                    onChange={(e) => {
+                      setEsConsumidorFinal(e.target.checked);
+                      if (e.target.checked) {
+                        setMesa("999");
+                        setClientName("Consumidor Final");
+                        setClientCedula("9999999999");
+                        setErrors({});
+                      } else {
+                        setMesa("");
+                        setClientName("");
+                        setClientCedula("");
+                      }
+                    }}
+                    style={{ marginRight: "0.5rem" }}
+                  />
+                  Consumidor Final
+                </label>
+              </div>
               <div>
                 <label style={{
                   display: "block",
@@ -670,13 +952,20 @@ const DashboardMesero = () => {
                       boxShadow: "0 0 0 2px rgba(253,187,40,0.2)"
                     }
                   }}
+                  
                   type="number"
-                  placeholder="Ej: 1"
+                  placeholder="Inserte el número de mesa"
+                  min="1"
+                  max="50"
                   value={mesa}
-                  onChange={(e) => setMesa(e.target.value)}
+                  onChange={(e) => handleChangeCampo("mesa", e.target.value)}
                 />
-              </div>
+                {errors.mesa && (
+                  <p style={{ color: "red", fontSize: "0.85rem", marginTop: "0.2rem" }}>{errors.mesa}</p>
+                )}
 
+              </div>
+                   
               <div>
                 <label style={{
                   display: "block",
@@ -702,9 +991,13 @@ const DashboardMesero = () => {
                   type="text"
                   placeholder="Nombre completo"
                   value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
+                  onChange={(e) => handleChangeCampo("nombre", e.target.value)}
                 />
+                {errors.nombre && (
+                    <p style={{ color: "red", fontSize: "0.85rem", marginTop: "0.2rem" }}>{errors.nombre}</p>
+                  )}
               </div>
+                  
 
               <div>
                 <label style={{
@@ -731,10 +1024,20 @@ const DashboardMesero = () => {
                   type="text"
                   placeholder="Número de cédula"
                   value={clientCedula}
-                  onChange={(e) => setClientCedula(e.target.value)}
+                  onChange={(e) => handleChangeCampo("cedula", e.target.value)}
                 />
+                {errors.cedula && (
+                    <p style={{ color: "red", fontSize: "0.85rem", marginTop: "0.2rem" }}>{errors.cedula}</p>
+                  )}
               </div>
+              
+
             </div>
+                    {errors.platos && (
+                    <p style={{ color: "red", fontSize: "0.85rem", marginTop: "-1rem", marginBottom: "1rem" }}>
+                      {errors.platos}
+                    </p>
+                  )}
 
             <div style={{ marginBottom: "2rem" }}>
               <h3 style={{ 
@@ -840,7 +1143,7 @@ const DashboardMesero = () => {
                 color: "#666",
                 fontSize: "0.9rem",
                 fontWeight: "500"
-              }}>Notas para el pedido (opcional)</label>
+              }}>Adicionales (opcional)</label>
               <textarea
                 style={{
                   width: "100%",
@@ -859,8 +1162,16 @@ const DashboardMesero = () => {
                 }}
                 placeholder="Instrucciones especiales, preferencias, etc."
                 value={notasPedido}
-                onChange={(e) => setNotasPedido(e.target.value)}
+                onChange={(e) =>{
+                  const texto = e.target.value;
+                  if (texto.length <= LIMITE_NOTAS) {
+                    setNotasPedido(texto);
+                  }
+                }} 
               />
+              <p style={{ fontSize: "0.8rem", color: notasPedido.length >= LIMITE_NOTAS ? "red" : "#666", textAlign: "right" }}>
+              {notasPedido.length}/{LIMITE_NOTAS} caracteres
+            </p>
             </div>
 
             {error && (
@@ -902,15 +1213,16 @@ const DashboardMesero = () => {
                 Cancelar
               </button>
               <button
+               disabled={Object.keys(errors).length > 0 || platosSeleccionados.length === 0}
                 style={{
-                  background: "#fdbb28",
+                  background: Object.keys(errors).length > 0 || platosSeleccionados.length === 0 ? "#ccc" : "#fdbb28",
                   color: "#222222",
                   border: "none",
                   borderRadius: "8px",
                   padding: "0.8rem 2rem",
                   fontSize: "1rem",
                   fontWeight: "600",
-                  cursor: "pointer",
+                  cursor: Object.keys(errors).length > 0 || platosSeleccionados.length === 0 ? "not-allowed" : "pointer",
                   transition: "all 0.2s",
                   display: "flex",
                   alignItems: "center",
@@ -936,6 +1248,7 @@ const DashboardMesero = () => {
                   </span>
                 )}
               </button>
+
             </div>
           </section>
         )}
