@@ -214,6 +214,65 @@ app.get('/health', async (req, res) => {
   }
 });
 
+
+
+// PUT: Cancelar pedido y restaurar stock
+app.put('/api/pedidos/:id/cancelar', async (req, res) => {
+  const pedidoId = req.params.id;
+  const client = await pool.connect();
+  
+  try {
+    // Verificar el estado actual del pedido
+    const estadoResult = await client.query(
+      'SELECT estado FROM pedidos WHERE id = $1',
+      [pedidoId]
+    );
+
+    if (!estadoResult.rows.length) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
+    if (estadoResult.rows[0].estado === 'CANCELADO') {
+      return res.status(400).json({ error: 'Este pedido ya está cancelado' });
+    }
+
+    await client.query('BEGIN');
+    
+    // Obtener los platos del pedido
+    const platosResult = await client.query(
+      `SELECT pp.plato_id, pp.cantidad 
+       FROM pedido_platos pp 
+       WHERE pp.pedido_id = $1`,
+      [pedidoId]
+    );
+    
+    // Restaurar el stock de cada plato
+    for (const plato of platosResult.rows) {
+      await client.query(
+        `UPDATE platos 
+         SET stock_disponible = stock_disponible + $1 
+         WHERE id = $2`,
+        [plato.cantidad, plato.plato_id]
+      );
+    }
+    
+    // Actualizar estado del pedido
+    await client.query(
+      `UPDATE pedidos SET estado = 'CANCELADO', status_id = 4 WHERE id = $1`,
+      [pedidoId]
+    );
+    
+    await client.query('COMMIT');
+    res.json({ success: true, mensaje: 'Pedido cancelado y stock restaurado' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error al cancelar pedido:', error);
+    res.status(500).json({ error: 'Error al cancelar el pedido' });
+  } finally {
+    client.release();
+  }
+});
+
 const PORT = process.env.PORT || 3004;
 app.listen(PORT, () => {
   console.log(`Servicio de pedidos corriendo en el puerto ${PORT}`);
